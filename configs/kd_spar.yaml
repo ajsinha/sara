@@ -1,0 +1,23 @@
+# configs/kd_spar.yaml — KD-SPAR hyperparameters (all variants)
+teacher_model: claude-3-5-sonnet-20241022
+student_model: claude-sonnet-4-5-20250929
+
+# Base KD-SPAR
+iterations: 10
+threshold: 0.003
+n_proposals: 4
+top_k: 3
+
+# Multi-Teacher
+regression_tol: 0.02
+
+# Adversarial
+hardness_percentile: 0.25
+dual_threshold: 0.005
+standard_regression: 0.02
+n_generated_per_topic: 10
+
+# Federated
+federated_rounds: 10
+min_clients: 2
+server_threshold: 0.003

@@ -1,0 +1,19 @@
+# configs/rag_migration.yaml
+# RAG model migration configuration
+teacher_model: claude-3-5-sonnet-20241022
+student_model: claude-sonnet-4-5-20250929
+embedding_model: sentence-transformers/all-mpnet-base-v2
+chroma_path: ./chroma_db
+collection_name: kd_knowledge_base
+top_k: 5
+n_harvest: 200
+max_tokens: 1024
+
+# KD scoring thresholds (equivalence test suite)
+thresholds:
+  citation_fidelity: 0.90
+  mean_kd_score: 0.85
+  format_pass_rate: 1.00
+  calibration_lo: 0.80
+  calibration_hi: 1.20
+  hallucination_proxy: 0.12

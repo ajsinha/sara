@@ -1,0 +1,14 @@
+# configs/nlp_sst2.yaml — BERT distillation on SST-2
+teacher_id: bert-base-uncased
+student_id: null          # null = auto-build 6-layer DistilBERT
+dataset: glue/sst2
+max_length: 128
+alpha: 0.5
+beta: 0.01
+temperature: 4.0
+epochs: 5
+batch_size: 32
+learning_rate: 0.00002
+warmup_ratio: 0.06
+output_dir: ./output/bert_distil
+fp16: true

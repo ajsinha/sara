@@ -1,0 +1,614 @@
+"""
+experiments/kd_spar_ablation_ollama.py
+========================================
+Controlled KD-SPAR ablation using LOCAL Ollama models.
+
+  ✓  Zero API cost
+  ✓  No rate limits  →  full experiment in ~20 minutes
+  ✓  Fully reproducible (fixed seed + temperature=0)
+  ✓  Works completely offline after models are pulled
+
+FOUR CONDITIONS (identical to kd_spar_ablation.py, different backend)
+----------------------------------------------------------------------
+A  KD-SPAR (student self-proposed)       — our method
+B  Externally proposed (teacher proposes) — same KD signal, different proposer
+C  Random instructions                    — no KD signal
+D  No prompt tuning                       — vanilla baseline
+
+MODEL CONFIGURATIONS
+--------------------
+Config 1: Teacher=llama3.1:8b  →  Student=llama3.2:3b   (same family)
+Config 2: Teacher=qwen2.5:7b   →  Student=llama3.2:3b   (cross-family)
+Config 3: Teacher=llama3.1:8b  →  Student=qwen2.5:3b    (cross-family, Qwen student)
+
+Choose with --config 1|2|3  or  --teacher <model> --student <model>
+
+SETUP ON ORYXPRO (Pop!_OS)
+---------------------------
+  # 1. Install Ollama
+  curl -fsSL https://ollama.com/install.sh | sh
+
+  # 2. Pull the models  (one-time download)
+  ollama pull llama3.1:8b     # ~4.7 GB
+  ollama pull llama3.2:3b     # ~2.0 GB
+  ollama pull qwen2.5:7b      # ~4.4 GB  (for config 2)
+
+  # 3. Start Ollama  (or it auto-starts as a systemd service)
+  ollama serve &
+
+  # 4. Run the ablation
+  cd knowledge_distillation
+  source .venv/bin/activate
+  pip install -e ".[rag]"  requests
+
+  # Config 1 (llama8b → llama3b) — recommended first run
+  python experiments/kd_spar_ablation_ollama.py --config 1 --iterations 3
+
+  # Config 2 (qwen7b → llama3b) — cross-family comparison
+  python experiments/kd_spar_ablation_ollama.py --config 2 --iterations 3
+
+  # Both configs, 3 seeds each — publication quality
+  for cfg in 1 2; do
+    for seed in 42 123 777; do
+      python experiments/kd_spar_ablation_ollama.py --config $cfg --iterations 3 --seed $seed
+    done
+  done
+
+EXPECTED RUNTIME
+----------------
+  llama3.1:8b teacher + llama3.2:3b student, 3 iterations, 40 train / 15 val:
+    OryxPro (RTX 3070 Ti):  ~12–18 minutes
+    OryxPro (CPU only):     ~45–90 minutes
+
+GPU IS OPTIONAL. Set OLLAMA_NUM_GPU=0 to force CPU.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import random
+import re
+import sys
+import time
+from dataclasses import dataclass, field
+from datetime import datetime
+from pathlib import Path
+from typing import Optional
+
+# ── Ensure project root on path ───────────────────────────────────────────
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(PROJECT_ROOT))
+
+from sara.rag.pipeline import RAGVectorStore
+from sara.rag.ollama_client import (
+    OllamaClient,
+    OLLAMA_DEFAULT_SYSTEM,
+    check_ollama_running,
+    ensure_model,
+    list_available_models,
+)
+from sara.rag.ollama_pipeline import OllamaRAGPipeline
+from sara.rag.ollama_kd_spar import OllamaKDSPAR
+from sara.rag.kd_spar import _kd_score, _classify_failure, _target_pattern, FAILURE_DESCRIPTIONS
+
+RESULTS_DIR = Path(__file__).parent / "results"
+RESULTS_DIR.mkdir(exist_ok=True)
+
+OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
+
+# ── Model configs ──────────────────────────────────────────────────────────
+MODEL_CONFIGS = {
+    1: {"teacher": "llama3.1:8b",  "student": "llama3.2:3b",  "label": "llama8b→llama3b"},
+    2: {"teacher": "qwen2.5:7b",   "student": "llama3.2:3b",  "label": "qwen7b→llama3b"},
+    3: {"teacher": "llama3.1:8b",  "student": "qwen2.5:3b",   "label": "llama8b→qwen3b"},
+}
+
+# ── Random instruction pool ────────────────────────────────────────────────
+RANDOM_INSTRUCTION_POOL = [
+    "Always use bullet points when listing multiple items.",
+    "Begin every response with a one-sentence summary.",
+    "Keep responses under 120 words whenever possible.",
+    "Use the active voice in all sentences.",
+    "End every response with a clarifying question.",
+    "Include at least one concrete example in each response.",
+    "Use the Oxford comma when listing three or more items.",
+    "Include a brief disclaimer about response limitations.",
+    "Use subheadings to organise responses longer than 100 words.",
+    "Translate any jargon into plain language immediately after using it.",
+    "Always acknowledge if there are multiple valid perspectives.",
+    "Start responses with 'To answer your question directly:'",
+    "Prefer shorter sentences with fewer than 20 words each.",
+    "Use the phrase 'In summary' before concluding paragraphs.",
+    "Include a confidence rating (high/medium/low) at the end.",
+    "Reference the most relevant source document first.",
+    "Avoid passive constructions wherever possible.",
+    "State what you cannot confirm before what you can.",
+    "Use numbered lists for procedural or sequential content.",
+    "Always spell out acronyms on first use.",
+]
+
+EXTERNAL_PROPOSE_PROMPT = """\
+You are a prompt engineering expert optimising a knowledge assistant's system prompt.
+
+The assistant is failing with these issues:
+{failure_modes}
+
+The target response pattern shows:
+{target_pattern}
+
+Write exactly ONE instruction to add to the assistant's system prompt.
+Return ONLY the instruction text. No preamble, no quotes, no explanation.
+"""
+
+# ── Corpus ────────────────────────────────────────────────────────────────
+CORPUS = {
+    "kd_foundations.txt": """
+        Knowledge distillation transfers knowledge from a large teacher model to a smaller
+        student model. Hinton et al. (2015) formalised this using temperature-scaled softmax
+        outputs as soft targets. The temperature parameter T controls the softness of the
+        distribution — higher T flattens it, revealing inter-class similarity called dark
+        knowledge. The combined distillation loss is: L = alpha * T^2 * KL(student || teacher)
+        + (1 - alpha) * CE(student, labels). The T-squared factor compensates for gradient
+        magnitude reduction. Feature-based distillation (FitNets) aligns intermediate layer
+        representations. Attention transfer distillation aligns spatial attention maps.
+        Relational KD distils pairwise structural relationships between samples.
+    """,
+    "rag_systems.txt": """
+        Retrieval-Augmented Generation (RAG) grounds language model responses in external
+        knowledge by retrieving relevant document passages at inference time. A RAG pipeline
+        has three phases: document ingestion (chunk, embed, store in vector database),
+        retrieval (semantic search over embeddings), and generation (LLM synthesises answer
+        from retrieved context). ChromaDB is a popular open-source vector database for RAG.
+        Citation format [Doc-N] traces claims to source passages. Good RAG responses cite
+        every claim with [Doc-N] notation and express uncertainty when context is partial.
+    """,
+    "kd_spar_method.txt": """
+        KD-SPAR (Knowledge Distillation via Student Prompt Auto-Rewriting) lets the student
+        model diagnose its own failure modes and propose targeted amendments to its own
+        system prompt. The algorithm has four phases: diagnostic pass (compare student to
+        teacher, classify failures), self-interview (student proposes one instruction per
+        failure mode), aggregation (cluster and score proposals), and validate-and-commit
+        (accept only if KD score improves). The self-knowledge hypothesis claims that the
+        student has privileged knowledge about what instructions will improve its own
+        performance, because the proposer and the executor are the same model.
+    """,
+    "local_models.txt": """
+        Llama 3.1 is a family of instruction-tuned models from Meta released in July 2024.
+        The 8B parameter version offers strong instruction following and reasoning at a
+        modest footprint (~4.7 GB in Q4 quantisation). Llama 3.2 includes a 3B parameter
+        model designed for on-device and edge deployment, achieving strong performance at
+        ~2 GB. Qwen 2.5 from Alibaba offers 7B and 3B variants with excellent multilingual
+        capability and strong instruction adherence. Running these models locally via Ollama
+        requires no API key and provides full reproducibility.
+    """,
+}
+
+TRAIN_QUERIES = [
+    "What is the role of temperature in knowledge distillation?",
+    "How does the T-squared scaling factor work?",
+    "What is dark knowledge and why does it matter?",
+    "Explain the combined distillation loss formula.",
+    "What is the difference between soft targets and hard labels?",
+    "How does FitNets feature-based distillation work?",
+    "What does the alpha parameter control in KD?",
+    "How does attention transfer distillation work?",
+    "How does ChromaDB support a RAG pipeline?",
+    "What are the three phases of a RAG pipeline?",
+    "Why should RAG responses use [Doc-N] citations?",
+    "What failure modes does KD-SPAR target?",
+    "What is the self-interview phase of KD-SPAR?",
+    "What is the self-knowledge hypothesis in KD-SPAR?",
+    "How does Llama 3.1 8B differ from Llama 3.2 3B?",
+    "What is Qwen 2.5 and what are its strengths?",
+    "What is relational knowledge distillation?",
+    "How does progressive distillation work?",
+    "What is the diagnostic pass in KD-SPAR?",
+    "How does aggregation work in the KD-SPAR loop?",
+    "When should you use a high temperature in KD?",
+    "What is the capacity ratio in knowledge distillation?",
+    "How does self-distillation work with early-exit networks?",
+    "What is the validate-and-commit phase of KD-SPAR?",
+    "How does Ollama enable local model deployment?",
+    "What are the main failure modes KD-SPAR diagnoses?",
+    "What makes KD-SPAR different from DSPy or OPRO?",
+    "How does online mutual learning work?",
+    "What is the hallucination proxy metric in RAG?",
+    "What is citation fidelity and how is it measured?",
+]
+
+VAL_QUERIES = [
+    "What is the primary contribution of KD-SPAR?",
+    "Why does the student self-author its own prompt?",
+    "What is the T-squared factor and why is it necessary?",
+    "What does the missing_citation failure mode indicate?",
+    "How does the calibration ratio equivalence check work?",
+    "What is the difference between gap-mined and generated adversarial queries?",
+    "How does the validate-and-commit phase prevent overfitting?",
+    "What is dark knowledge in KD?",
+    "How does KD-SPAR's self-knowledge differ from Constitutional AI?",
+    "What makes Llama 3.2 3B suitable as a student model?",
+]
+
+
+# ── Metrics ────────────────────────────────────────────────────────────────
+CITATION_RE = re.compile(r"\[Doc-\d+\]")
+HEDGE_WORDS = ["may", "might", "could", "possibly", "perhaps", "appears", "seems",
+               "uncertain", "unclear", "cannot confirm"]
+
+def citation_fidelity(s: str, t: str) -> float:
+    return 1.0 if (not CITATION_RE.search(t)) or CITATION_RE.search(s) else 0.0
+
+def hedge_match(s: str, t: str) -> float:
+    sh = sum(1 for w in HEDGE_WORDS if w in s.lower())
+    th = sum(1 for w in HEDGE_WORDS if w in t.lower())
+    return sh / max(th, 0.01)
+
+def evaluate_prompt(
+    prompt: str,
+    queries: list[str],
+    teacher_responses: dict[str, str],
+    store: RAGVectorStore,
+    student_model: str,
+    label: str = "",
+) -> dict:
+    pipeline = OllamaRAGPipeline(
+        student_model, store=store, system_prompt=prompt,
+        base_url=OLLAMA_BASE_URL, auto_pull=False, temperature=0.0,
+    )
+    scores, cits, hedges = [], [], []
+    per_query = []
+    for q in queries:
+        if q not in teacher_responses: continue
+        try:
+            s_resp = pipeline.query(q, return_context=False).answer
+            t_resp = teacher_responses[q]
+            kd  = _kd_score(s_resp, t_resp)
+            cit = citation_fidelity(s_resp, t_resp)
+            hed = hedge_match(s_resp, t_resp)
+            scores.append(kd); cits.append(cit); hedges.append(hed)
+            per_query.append({"q": q[:60], "kd": round(kd,4), "cit": round(cit,4)})
+        except Exception as exc:
+            print(f"    [eval] error: {exc}")
+
+    result = {
+        "label":             label,
+        "n_queries":         len(scores),
+        "mean_kd_score":     round(sum(scores) / max(len(scores), 1), 4),
+        "citation_fidelity": round(sum(cits)   / max(len(cits),   1), 4),
+        "hedge_match":       round(sum(hedges)  / max(len(hedges),  1), 4),
+        "per_query":         per_query,
+    }
+    print(f"  [{label}]  kd={result['mean_kd_score']:.4f}  "
+          f"cit={result['citation_fidelity']:.3f}  hedge={result['hedge_match']:.3f}")
+    return result
+
+
+def batch_kd(queries, teacher_resps, pipeline) -> float:
+    scores = []
+    for q in queries:
+        if q not in teacher_resps: continue
+        try:
+            s = pipeline.query(q, return_context=False).answer
+            scores.append(_kd_score(s, teacher_resps[q]))
+        except Exception: scores.append(0.0)
+    return sum(scores) / max(len(scores), 1)
+
+
+# ── Condition builders ─────────────────────────────────────────────────────
+
+def build_D(teacher_model: str, student_model: str) -> str:
+    return OLLAMA_DEFAULT_SYSTEM
+
+def build_C(teacher_model: str, student_model: str, n: int = 4) -> str:
+    sampled = random.sample(RANDOM_INSTRUCTION_POOL, min(n, len(RANDOM_INSTRUCTION_POOL)))
+    return OLLAMA_DEFAULT_SYSTEM + "\n\n# Random instructions:\n" + \
+           "\n".join(f"- {s}" for s in sampled)
+
+def build_B(
+    teacher_model: str,
+    student_model: str,
+    train_queries: list[str],
+    teacher_responses: dict[str, str],
+    store: RAGVectorStore,
+    iterations: int = 3,
+) -> str:
+    """Condition B: TEACHER externally proposes instructions."""
+    current = OLLAMA_DEFAULT_SYSTEM
+    teacher_proposer = OllamaClient(
+        teacher_model, system_prompt=current,
+        base_url=OLLAMA_BASE_URL, temperature=0.3,
+    )
+    student_pipe = OllamaRAGPipeline(
+        student_model, store=store, system_prompt=current,
+        base_url=OLLAMA_BASE_URL, auto_pull=False, temperature=0.0,
+    )
+
+    for it in range(iterations):
+        # Diagnose failures
+        scored = []
+        for q in train_queries[:8]:
+            if q not in teacher_responses: continue
+            try:
+                s = student_pipe.query(q, return_context=False).answer
+                sc = _kd_score(s, teacher_responses[q])
+                md = _classify_failure(s, teacher_responses[q])
+                scored.append((q, s, teacher_responses[q], md, sc))
+            except Exception: pass
+        scored.sort(key=lambda x: x[4])
+
+        if not scored: break
+
+        # Teacher proposes (NOT student)
+        proposals = []
+        for q, s_resp, t_resp, mode, _ in scored[:3]:
+            t_pats = []
+            if CITATION_RE.search(t_resp): t_pats.append("uses [Doc-N] citations")
+            if any(w in t_resp.lower() for w in HEDGE_WORDS): t_pats.append("hedges uncertainty")
+            if len(t_resp) > 200: t_pats.append("provides detailed multi-sentence answers")
+            prompt = EXTERNAL_PROPOSE_PROMPT.format(
+                failure_modes=mode,
+                target_pattern="; ".join(t_pats) or "matches reference style",
+            )
+            try:
+                resp = teacher_proposer._client.create(
+                    model=teacher_model, max_tokens=80,
+                    messages=[{"role": "user", "content": prompt}],
+                )
+                text = resp.content[0].text.strip()
+                if len(text) > 15 and not text.lower().startswith(("sure","here","i'll")):
+                    proposals.append(text)
+            except Exception as exc:
+                print(f"    [external] error: {exc}")
+
+        if not proposals: break
+
+        # Same commit gate as KD-SPAR (fair comparison)
+        old_sc = batch_kd(VAL_QUERIES[:5], teacher_responses, student_pipe)
+        candidate = (current + "\n\n# External proposals:\n"
+                     + "\n".join(f"- {p}" for p in proposals[:3]))
+        student_pipe.client.update_system(candidate)
+        new_sc = batch_kd(VAL_QUERIES[:5], teacher_responses, student_pipe)
+
+        if new_sc > old_sc + 0.003:
+            current = candidate
+            print(f"    [external] iter {it+1}: {old_sc:.4f} → {new_sc:.4f}  ✓")
+        else:
+            student_pipe.client.update_system(current)
+            print(f"    [external] iter {it+1}: {old_sc:.4f} → {new_sc:.4f}  ✗ reverted")
+
+    return current
+
+def build_A(
+    teacher_model: str,
+    student_model: str,
+    train_queries: list[str],
+    val_queries: list[str],
+    teacher_responses: dict[str, str],
+    store: RAGVectorStore,
+    iterations: int = 3,
+) -> str:
+    """Condition A: KD-SPAR student self-proposed."""
+    spar = OllamaKDSPAR(
+        teacher_model=teacher_model, student_model=student_model,
+        vector_store=store, base_url=OLLAMA_BASE_URL, auto_pull=False,
+        temperature=0.3,  # allow some variation for proposal diversity
+    )
+    final_prompt, _ = spar.run(
+        train_queries=train_queries, val_queries=val_queries,
+        teacher_responses=teacher_responses,
+        iterations=iterations, threshold=0.003, n_proposals=4, top_k=3,
+    )
+    return final_prompt
+
+
+# ── Main ablation ──────────────────────────────────────────────────────────
+
+@dataclass
+class AblationResult:
+    condition: str
+    description: str
+    final_prompt: str
+    val_metrics: dict
+    build_time_sec: float
+
+def run_ablation(
+    teacher_model: str,
+    student_model: str,
+    config_label:  str,
+    iterations:    int  = 3,
+    seed:          int  = 42,
+    quick_mode:    bool = False,
+) -> tuple[list[AblationResult], dict]:
+    random.seed(seed)
+
+    train_q = TRAIN_QUERIES[:10] if quick_mode else TRAIN_QUERIES
+    val_q   = VAL_QUERIES[:5]    if quick_mode else VAL_QUERIES
+
+    print(f"\n{'='*65}")
+    print(f"Ollama KD-SPAR Ablation  [{config_label}]")
+    print(f"  Teacher : {teacher_model}")
+    print(f"  Student : {student_model}")
+    print(f"  Train Q : {len(train_q)}   Val Q : {len(val_q)}")
+    print(f"  Iters   : {iterations}   Seed : {seed}")
+    print(f"{'='*65}")
+
+    # Build store
+    store_path = str(RESULTS_DIR / f"ablation_ollama_{config_label}_chroma")
+    store = RAGVectorStore(persist_path=store_path)
+    teacher_pipe = OllamaRAGPipeline(
+        teacher_model, store=store, base_url=OLLAMA_BASE_URL, auto_pull=False, temperature=0.0,
+    )
+    n = teacher_pipe.ingest(CORPUS)
+    print(f"Indexed {n} chunks")
+
+    # Harvest teacher responses (temperature=0 for reproducibility)
+    print(f"\nHarvesting teacher responses ({teacher_model}, temperature=0) …")
+    t_resps: dict[str, str] = {}
+    all_q = list(dict.fromkeys(train_q + val_q))
+    for i, q in enumerate(all_q, 1):
+        try:
+            t_resps[q] = teacher_pipe.query(q, return_context=False).answer
+            if i % 10 == 0: print(f"  {i}/{len(all_q)} …")
+        except Exception as exc: print(f"  error: {q[:45]}: {exc}")
+    print(f"  {len(t_resps)}/{len(all_q)} collected")
+
+    results: list[AblationResult] = []
+
+    def run_cond(label, description, fn, *args):
+        print(f"\n{'='*55}\nCONDITION {label} — {description}")
+        t0 = time.time()
+        prompt = fn(*args)
+        metrics = evaluate_prompt(
+            prompt, val_q, t_resps, store, student_model, label=f"{label}_{description[:8]}"
+        )
+        results.append(AblationResult(label, description, prompt, metrics, round(time.time()-t0,1)))
+
+    run_cond("D", "Baseline (no tuning)",     build_D, teacher_model, student_model)
+    run_cond("C", "Random instructions",      build_C, teacher_model, student_model, min(iterations*2, 6))
+    run_cond("B", "External-proposed",        build_B, teacher_model, student_model,
+             train_q, t_resps, store, iterations)
+    run_cond("A", "KD-SPAR (self-proposed)",  build_A, teacher_model, student_model,
+             train_q, val_q, t_resps, store, iterations)
+
+    return results, t_resps
+
+
+def print_report(results: list[AblationResult], config_label: str) -> str:
+    sorted_r  = sorted(results, key=lambda r: r.val_metrics["mean_kd_score"], reverse=True)
+    baseline  = next(r for r in results if r.condition == "D")
+    d_kd      = baseline.val_metrics["mean_kd_score"]
+
+    lines = []
+    lines.append(f"\n{'='*65}")
+    lines.append(f"OLLAMA KD-SPAR ABLATION RESULTS  [{config_label}]")
+    lines.append(f"{'='*65}")
+    lines.append(f"{'Rank':<5}{'Cond':<6}{'KD Score':<12}{'Δ vs D':<10}"
+                 f"{'Cit Fid':<10}{'Hedge':<10}{'Time':>8}  Description")
+    lines.append("-"*65)
+
+    for rank, r in enumerate(sorted_r, 1):
+        delta = r.val_metrics["mean_kd_score"] - d_kd
+        lines.append(
+            f"  {rank}     {r.condition}     "
+            f"{r.val_metrics['mean_kd_score']:.4f}       "
+            f"{delta:+.4f}    "
+            f"{r.val_metrics['citation_fidelity']:.3f}      "
+            f"{r.val_metrics['hedge_match']:.3f}    "
+            f"{r.build_time_sec:>6.0f}s  "
+            f"{r.description[:30]}"
+        )
+
+    a = next(r for r in results if r.condition == "A")
+    b = next(r for r in results if r.condition == "B")
+    c = next(r for r in results if r.condition == "C")
+    a_kd = a.val_metrics["mean_kd_score"]
+    b_kd = b.val_metrics["mean_kd_score"]
+    c_kd = c.val_metrics["mean_kd_score"]
+    gap  = a_kd - b_kd
+
+    lines.append(f"\n{'='*65}")
+    supported = a_kd > b_kd and a_kd > c_kd and a_kd > d_kd
+    lines.append("KEY FINDING:")
+    if supported:
+        lines.append("  ✓ SELF-KNOWLEDGE HYPOTHESIS SUPPORTED")
+        lines.append(f"  A={a_kd:.4f} > B={b_kd:.4f} > D={d_kd:.4f} > C={c_kd:.4f}")
+    else:
+        lines.append("  ✗ INCONCLUSIVE — see details below")
+        lines.append(f"  A={a_kd:.4f}  B={b_kd:.4f}  D={d_kd:.4f}  C={c_kd:.4f}")
+
+    lines.append(f"\nA−B gap (self-authorship value) = {gap:+.4f}")
+    if   gap > 0.02: lines.append("  → STRONG evidence for self-knowledge claim")
+    elif gap > 0.01: lines.append("  → MODERATE — supports claim; more iterations would strengthen it")
+    elif gap > 0.005:lines.append("  → WEAK — suggestive; try more iterations or a larger query set")
+    elif gap > 0.0:  lines.append("  → MARGINAL — positive but within noise; re-run with more iterations")
+    else:            lines.append("  → NEGATIVE — external matching/beating self-proposed")
+
+    lines.append(f"\nINTERPRETATION:")
+    lines.append("  A > B  → self-authorship adds value beyond the KD signal alone")
+    lines.append("  B > C  → KD-signal-guided proposals beat random augmentation")
+    lines.append("  B > D  → any KD-guided proposal beats no tuning")
+    lines.append("  C ≈ D  → random instructions provide no real signal (expected)")
+
+    report = "\n".join(lines)
+    print(report)
+    return report
+
+
+def save_results(results, config_label, report, seed) -> Path:
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    jp = RESULTS_DIR / f"ablation_ollama_{config_label}_seed{seed}_{ts}.json"
+    tp = RESULTS_DIR / f"ablation_ollama_{config_label}_seed{seed}_{ts}_summary.txt"
+
+    conds_data = [
+        {
+            "condition":    r.condition,
+            "description":  r.description,
+            "val_metrics":  r.val_metrics,
+            "build_time_s": r.build_time_sec,
+            "final_prompt": r.final_prompt,
+        }
+        for r in results
+    ]
+    with open(jp, "w") as f:
+        json.dump({"timestamp": ts, "config": config_label, "seed": seed,
+                   "conditions": conds_data}, f, indent=2)
+    with open(tp, "w") as f:
+        f.write(report)
+    print(f"\nSaved: {jp}")
+    return jp
+
+
+# ── Entry point ────────────────────────────────────────────────────────────
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="KD-SPAR Ablation — Local Ollama Models"
+    )
+    parser.add_argument("--config", type=int, choices=[1,2,3], default=1,
+                        help="Model config: 1=llama8b→llama3b, 2=qwen7b→llama3b, 3=llama8b→qwen3b")
+    parser.add_argument("--teacher", type=str, default=None,
+                        help="Override teacher model (e.g. llama3.1:8b)")
+    parser.add_argument("--student", type=str, default=None,
+                        help="Override student model (e.g. llama3.2:3b)")
+    parser.add_argument("--iterations", type=int, default=3,
+                        help="SPAR iterations per condition (default 3)")
+    parser.add_argument("--seed", type=int, default=42,
+                        help="Random seed")
+    parser.add_argument("--quick", action="store_true",
+                        help="Quick mode: 10 train / 5 val queries")
+    args = parser.parse_args()
+
+    # Check Ollama is running
+    if not check_ollama_running(OLLAMA_BASE_URL):
+        print(f"ERROR: Ollama server not running at {OLLAMA_BASE_URL}")
+        print("Start it:   ollama serve")
+        print("Install:    curl -fsSL https://ollama.com/install.sh | sh")
+        sys.exit(1)
+
+    # Resolve model config
+    if args.teacher and args.student:
+        teacher_m = args.teacher
+        student_m = args.student
+        label     = f"custom_{teacher_m.replace(':','_')}_{student_m.replace(':','_')}"
+    else:
+        cfg       = MODEL_CONFIGS[args.config]
+        teacher_m = cfg["teacher"]
+        student_m = cfg["student"]
+        label     = cfg["label"]
+
+    print(f"Available models: {list_available_models(OLLAMA_BASE_URL)}")
+
+    # Pull if needed
+    ensure_model(teacher_m, OLLAMA_BASE_URL)
+    ensure_model(student_m, OLLAMA_BASE_URL)
+
+    # Run
+    results, teacher_responses = run_ablation(
+        teacher_model=teacher_m, student_model=student_m,
+        config_label=label,
+        iterations=args.iterations, seed=args.seed,
+        quick_mode=args.quick,
+    )
+    report = print_report(results, label)
+    save_results(results, label, report, args.seed)

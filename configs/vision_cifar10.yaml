@@ -1,0 +1,10 @@
+# configs/vision_cifar10.yaml
+# Hyperparameters for ResNet-50 → MobileNetV2 on CIFAR-10
+temperature: 4.0
+alpha: 0.6
+epochs: 30
+batch_size: 128
+learning_rate: 0.001
+weight_decay: 0.0001
+grad_clip: 5.0
+checkpoint_dir: ./checkpoints/vision
