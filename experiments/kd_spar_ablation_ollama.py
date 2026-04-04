@@ -1,3 +1,7 @@
+# Copyright (C) 2025 Ashutosh Sinha (ajsinha@gmail.com)
+# Sara (सार) — Knowledge Distillation and KD-SPAR Toolkit  v1.1.0
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# https://github.com/ashutosh-sinha/sara
 """
 experiments/kd_spar_ablation_ollama.py
 ========================================
@@ -315,6 +319,9 @@ def build_B(
     iterations: int = 3,
 ) -> str:
     """Condition B: TEACHER externally proposes instructions."""
+    from sara.core.progress import SaraLogger
+    log = SaraLogger("Cond-B")
+
     current = OLLAMA_DEFAULT_SYSTEM
     teacher_proposer = OllamaClient(
         teacher_model, system_prompt=current,
@@ -326,21 +333,27 @@ def build_B(
     )
 
     for it in range(iterations):
+        log.info(f"  External iteration {it+1}/{iterations} — diagnosing")
         # Diagnose failures
         scored = []
-        for q in train_queries[:8]:
+        q_batch = train_queries[:8]
+        for i, q in enumerate(q_batch, 1):
             if q not in teacher_responses: continue
             try:
                 s = student_pipe.query(q, return_context=False).answer
                 sc = _kd_score(s, teacher_responses[q])
                 md = _classify_failure(s, teacher_responses[q])
                 scored.append((q, s, teacher_responses[q], md, sc))
-            except Exception: pass
+            except Exception:
+                pass
         scored.sort(key=lambda x: x[4])
 
-        if not scored: break
+        if not scored:
+            log.warn("  No scored queries — stopping B early")
+            break
 
         # Teacher proposes (NOT student)
+        log.info(f"  Generating external proposals from {teacher_model}")
         proposals = []
         for q, s_resp, t_resp, mode, _ in scored[:3]:
             t_pats = []
@@ -357,12 +370,14 @@ def build_B(
                     messages=[{"role": "user", "content": prompt}],
                 )
                 text = resp.content[0].text.strip()
-                if len(text) > 15 and not text.lower().startswith(("sure","here","i'll")):
+                if len(text) > 15 and not text.lower().startswith(("sure", "here", "i'll")):
                     proposals.append(text)
             except Exception as exc:
-                print(f"    [external] error: {exc}")
+                log.warn(f"  External proposal error: {exc}")
 
-        if not proposals: break
+        if not proposals:
+            log.warn("  No proposals generated — stopping B")
+            break
 
         # Same commit gate as KD-SPAR (fair comparison)
         old_sc = batch_kd(VAL_QUERIES[:5], teacher_responses, student_pipe)
@@ -373,10 +388,10 @@ def build_B(
 
         if new_sc > old_sc + 0.003:
             current = candidate
-            print(f"    [external] iter {it+1}: {old_sc:.4f} → {new_sc:.4f}  ✓")
+            log.result("B", new_sc, new_sc - old_sc, 0.0, accepted=True)
         else:
             student_pipe.client.update_system(current)
-            print(f"    [external] iter {it+1}: {old_sc:.4f} → {new_sc:.4f}  ✗ reverted")
+            log.result("B", new_sc, new_sc - old_sc, 0.0, accepted=False)
 
     return current
 
@@ -413,6 +428,58 @@ class AblationResult:
     val_metrics: dict
     build_time_sec: float
 
+
+def evaluate_prompt(
+    prompt: str,
+    queries: list[str],
+    teacher_responses: dict[str, str],
+    store: RAGVectorStore,
+    student_model: str,
+    label: str = "",
+    log=None,
+) -> dict:
+    """Evaluate a prompt against val queries, with per-query progress."""
+    from sara.core.progress import SaraLogger
+    _log = log or SaraLogger("eval")
+
+    pipeline = OllamaRAGPipeline(
+        student_model, store=store, system_prompt=prompt,
+        base_url=OLLAMA_BASE_URL, auto_pull=False, temperature=0.0,
+    )
+    eligible = [q for q in queries if q in teacher_responses]
+    _log.step(f"Evaluating {len(eligible)} val queries", total=len(eligible))
+
+    scores, cits, hedges, per_query = [], [], [], []
+    for i, q in enumerate(eligible, 1):
+        try:
+            s_resp = pipeline.query(q, return_context=False).answer
+            t_resp = teacher_responses[q]
+            kd  = _kd_score(s_resp, t_resp)
+            cit = 1.0 if (not CITATION_RE.search(t_resp)) or CITATION_RE.search(s_resp) else 0.0
+            hed = sum(1 for w in HEDGE_WORDS if w in s_resp.lower()) / max(
+                    sum(1 for w in HEDGE_WORDS if w in t_resp.lower()), 0.01)
+            scores.append(kd); cits.append(cit); hedges.append(hed)
+            per_query.append({"q": q[:60], "kd": round(kd, 4), "cit": round(cit, 4)})
+        except Exception as exc:
+            _log.warn(f"eval error on q{i}: {exc}")
+        _log.tick(i)
+
+    result = {
+        "label":             label,
+        "n_queries":         len(scores),
+        "mean_kd_score":     round(sum(scores) / max(len(scores), 1), 4),
+        "citation_fidelity": round(sum(cits)   / max(len(cits),   1), 4),
+        "hedge_match":       round(sum(hedges)  / max(len(hedges),  1), 4),
+        "per_query":         per_query,
+    }
+    _log.done(
+        f"kd={result['mean_kd_score']:.4f}  "
+        f"cit={result['citation_fidelity']:.3f}  "
+        f"hedge={result['hedge_match']:.3f}"
+    )
+    return result
+
+
 def run_ablation(
     teacher_model: str,
     student_model: str,
@@ -421,57 +488,82 @@ def run_ablation(
     seed:          int  = 42,
     quick_mode:    bool = False,
 ) -> tuple[list[AblationResult], dict]:
-    random.seed(seed)
+    from sara.core.progress import SaraLogger, Heartbeat, _fmt_elapsed
 
+    log = SaraLogger("Sara Ablation")
+    log.banner(
+        f"Sara (सार)  KD-SPAR Ablation",
+        f"Config   : {config_label}",
+        f"Teacher  : {teacher_model}",
+        f"Student  : {student_model}",
+        f"Seed     : {seed}   Iterations: {iterations}   Quick: {quick_mode}",
+    )
+
+    random.seed(seed)
     train_q = TRAIN_QUERIES[:10] if quick_mode else TRAIN_QUERIES
     val_q   = VAL_QUERIES[:5]    if quick_mode else VAL_QUERIES
+    log.info(f"Train queries: {len(train_q)}   Val queries: {len(val_q)}")
 
-    print(f"\n{'='*65}")
-    print(f"Ollama KD-SPAR Ablation  [{config_label}]")
-    print(f"  Teacher : {teacher_model}")
-    print(f"  Student : {student_model}")
-    print(f"  Train Q : {len(train_q)}   Val Q : {len(val_q)}")
-    print(f"  Iters   : {iterations}   Seed : {seed}")
-    print(f"{'='*65}")
+    # Start global heartbeat — prints if silent for 30s
+    log.start_heartbeat(interval=30, message="Waiting for Ollama (GPU inference in progress)…")
 
-    # Build store
-    store_path = str(RESULTS_DIR / f"ablation_ollama_{config_label}_chroma")
-    store = RAGVectorStore(persist_path=store_path)
+    # ── Ingest corpus ────────────────────────────────────────────────────────
+    log.section("Corpus ingestion")
+    store_path   = str(RESULTS_DIR / f"ablation_ollama_{config_label}_chroma")
+    store        = RAGVectorStore(persist_path=store_path)
     teacher_pipe = OllamaRAGPipeline(
-        teacher_model, store=store, base_url=OLLAMA_BASE_URL, auto_pull=False, temperature=0.0,
+        teacher_model, store=store, base_url=OLLAMA_BASE_URL,
+        auto_pull=False, temperature=0.0,
     )
     n = teacher_pipe.ingest(CORPUS)
-    print(f"Indexed {n} chunks")
+    log.done(f"Indexed {n} chunks from corpus")
 
-    # Harvest teacher responses (temperature=0 for reproducibility)
-    print(f"\nHarvesting teacher responses ({teacher_model}, temperature=0) …")
+    # ── Harvest teacher responses ────────────────────────────────────────────
+    log.section(f"Teacher harvest  ({teacher_model}, temperature=0)")
+    all_q   = list(dict.fromkeys(train_q + val_q))
     t_resps: dict[str, str] = {}
-    all_q = list(dict.fromkeys(train_q + val_q))
+    log.step(f"Querying teacher for {len(all_q)} responses", total=len(all_q))
     for i, q in enumerate(all_q, 1):
         try:
             t_resps[q] = teacher_pipe.query(q, return_context=False).answer
-            if i % 10 == 0: print(f"  {i}/{len(all_q)} …")
-        except Exception as exc: print(f"  error: {q[:45]}: {exc}")
-    print(f"  {len(t_resps)}/{len(all_q)} collected")
+        except Exception as exc:
+            log.warn(f"  q{i} failed: {exc}")
+        log.tick(i)
+    log.done(f"{len(t_resps)}/{len(all_q)} teacher responses collected")
 
+    # ── Run four conditions ──────────────────────────────────────────────────
     results: list[AblationResult] = []
+    cond_defs = [
+        ("D", "Baseline (no tuning)",    build_D,
+         (teacher_model, student_model)),
+        ("C", "Random instructions",     build_C,
+         (teacher_model, student_model, min(iterations * 2, 6))),
+        ("B", "External-proposed",       build_B,
+         (teacher_model, student_model, train_q, t_resps, store, iterations)),
+        ("A", "KD-SPAR (self-proposed)", build_A,
+         (teacher_model, student_model, train_q, val_q, t_resps, store, iterations)),
+    ]
 
-    def run_cond(label, description, fn, *args):
-        print(f"\n{'='*55}\nCONDITION {label} — {description}")
+    for cond_label, description, fn, args in cond_defs:
+        log.section(f"Condition {cond_label} — {description}")
         t0 = time.time()
-        prompt = fn(*args)
+        prompt  = fn(*args)
         metrics = evaluate_prompt(
-            prompt, val_q, t_resps, store, student_model, label=f"{label}_{description[:8]}"
+            prompt, val_q, t_resps, store, student_model,
+            label=f"{cond_label}_{description[:8]}",
+            log=log,
         )
-        results.append(AblationResult(label, description, prompt, metrics, round(time.time()-t0,1)))
+        elapsed = round(time.time() - t0, 1)
+        results.append(AblationResult(cond_label, description, prompt, metrics, elapsed))
+        log.metric(
+            f"Condition {cond_label}",
+            f"kd={metrics['mean_kd_score']:.4f}  "
+            f"cit={metrics['citation_fidelity']:.3f}  "
+            f"hedge={metrics['hedge_match']:.3f}",
+            f"{_fmt_elapsed(elapsed)}"
+        )
 
-    run_cond("D", "Baseline (no tuning)",     build_D, teacher_model, student_model)
-    run_cond("C", "Random instructions",      build_C, teacher_model, student_model, min(iterations*2, 6))
-    run_cond("B", "External-proposed",        build_B, teacher_model, student_model,
-             train_q, t_resps, store, iterations)
-    run_cond("A", "KD-SPAR (self-proposed)",  build_A, teacher_model, student_model,
-             train_q, val_q, t_resps, store, iterations)
-
+    log.stop_heartbeat()
     return results, t_resps
 
 
@@ -604,11 +696,17 @@ if __name__ == "__main__":
     ensure_model(student_m, OLLAMA_BASE_URL)
 
     # Run
+    t_run_start = time.time()
     results, teacher_responses = run_ablation(
         teacher_model=teacher_m, student_model=student_m,
         config_label=label,
         iterations=args.iterations, seed=args.seed,
         quick_mode=args.quick,
     )
-    report = print_report(results, label)
-    save_results(results, label, report, args.seed)
+    report   = print_report(results, label)
+    out_path = save_results(results, label, report, args.seed)
+
+    from sara.core.progress import SaraLogger, _fmt_elapsed
+    log = SaraLogger("Sara")
+    log.summary(time.time() - t_run_start)
+    print(f"Results file: {out_path}")

@@ -1,0 +1,41 @@
+                    GNU AFFERO GENERAL PUBLIC LICENSE
+                       Version 3, 19 November 2007
+
+Copyright (C) 2025 Ashutosh Sinha (ajsinha@gmail.com)
+
+Sara (सार) — Knowledge Distillation and KD-SPAR Toolkit
+Version 1.1.0
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as published
+by the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+---
+
+Additional terms under AGPLv3 Section 7:
+
+Attribution requirement: Any modified version of this software, or any
+software that incorporates substantial portions of it, must prominently
+display the following attribution in the documentation and/or other
+materials provided with the distribution:
+
+    "Based on Sara (सार) by Ashutosh Sinha (ajsinha@gmail.com)
+     https://github.com/ashutosh-sinha/sara"
+
+Research use: If you use Sara or KD-SPAR in published academic research,
+you are requested (but not required) to cite the Sara paper and
+acknowledge the original author.
+
+---
+
+For the full text of the GNU Affero General Public License v3, see:
+https://www.gnu.org/licenses/agpl-3.0.txt

@@ -1,9 +1,13 @@
+# Copyright (C) 2025 Ashutosh Sinha (ajsinha@gmail.com)
+# Sara (सार) — Knowledge Distillation and KD-SPAR Toolkit  v1.1.0
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# https://github.com/ashutosh-sinha/sara
 from __future__ import annotations
 from sara.core.utils import DEFAULT_SYSTEM_PROMPT  # noqa
 """
-kd.rag.ollama_client
+sara.rag.ollama_client
 =====================
-Drop-in replacement for :class:`kd.rag.pipeline.AnthropicClient` that calls
+Drop-in replacement for :class:`sara.rag.pipeline.AnthropicClient` that calls
 a locally-running Ollama server instead of the Anthropic API.
 
 Zero API costs · No rate limits · Fully reproducible · Works offline.
@@ -139,7 +143,7 @@ def ensure_model(model: str, base_url: str = OLLAMA_DEFAULT_URL) -> None:
 class OllamaClient:
     """
     Ollama-backed LLM client with the same interface as
-    :class:`kd.rag.pipeline.AnthropicClient`.
+    :class:`sara.rag.pipeline.AnthropicClient`.
 
     All calls go to a locally-running ``ollama serve`` instance.
 

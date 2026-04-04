@@ -1,11 +1,15 @@
+# Copyright (C) 2025 Ashutosh Sinha (ajsinha@gmail.com)
+# Sara (सार) — Knowledge Distillation and KD-SPAR Toolkit  v1.1.0
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# https://github.com/ashutosh-sinha/sara
 from __future__ import annotations
 """
-kd.rag.ollama_kd_spar
+sara.rag.ollama_kd_spar
 ======================
 Local-model KD-SPAR using Ollama.  No API key, no rate limits, no cost.
 
 This module contains thin wrappers around the base KD-SPAR classes that
-replace :class:`kd.rag.pipeline.RAGPipeline` / :class:`AnthropicClient`
+replace :class:`sara.rag.pipeline.RAGPipeline` / :class:`AnthropicClient`
 with their Ollama equivalents.  All core logic is unchanged.
 
 Classes
@@ -60,7 +64,7 @@ class OllamaKDSPAR:
     """
     KD-SPAR using local Ollama models.
 
-    Identical algorithm to :class:`kd.rag.kd_spar.KDSPAR` but uses
+    Identical algorithm to :class:`sara.rag.kd_spar.KDSPAR` but uses
     :class:`OllamaRAGPipeline` and :class:`OllamaClient`.
 
     Parameters
@@ -169,6 +173,14 @@ class OllamaKDSPAR:
         Delegates all algorithm logic to the parent class after substituting
         the Ollama pipeline for the Anthropic one.
         """
+        import time as _time
+        from sara.core.progress import SaraLogger, Heartbeat
+
+        log = SaraLogger("KD-SPAR")
+        log.info(f"Teacher: {self.teacher_model}  Student: {self.student_model}")
+        log.info(f"Iterations: {iterations}  threshold: {threshold}  "
+                 f"proposals: {n_proposals}  top_k: {top_k}")
+
         current_prompt  = base_prompt or OLLAMA_DEFAULT_SYSTEM
         student_pipe    = self.build_student_pipeline(current_prompt)
         interviewer     = OllamaClient(
@@ -180,35 +192,56 @@ class OllamaKDSPAR:
 
         try:
             for it in range(1, iterations + 1):
-                print(f"\n--- Ollama KD-SPAR  Iteration {it}/{iterations} ---")
+                it_start = _time.monotonic()
+                log.section(f"KD-SPAR  Iteration {it}/{iterations}")
 
                 # Phase 1: diagnose
+                log.step("Phase 1 — Diagnosing failures",
+                         total=min(len(train_queries), 8))
                 failures = self._diagnose(
-                    train_queries, teacher_responses, student_pipe
+                    train_queries, teacher_responses, student_pipe,
+                    progress_cb=lambda i: log.tick(i),
                 )
                 if not failures:
-                    print("  No failures found — converged.")
+                    log.done("No failures found — converged early")
                     break
-                print(f"  {len(failures)} failure(s) identified")
+                log.done(f"{len(failures)} failure(s) identified")
+                for _, _, _, mode, sc in failures[:3]:
+                    log.info(f"  mode={mode}  score={sc:.4f}")
 
                 # Phase 2: self-interview
+                log.step("Phase 2 — Self-interview",
+                         total=len(failures) * n_proposals)
                 proposals: list[str] = []
+                prop_count = 0
                 for q, s_resp, t_resp, mode, _ in failures:
-                    props = self._interview(q, s_resp, t_resp, mode, interviewer, n_proposals)
+                    props = self._interview(
+                        q, s_resp, t_resp, mode, interviewer, n_proposals
+                    )
                     proposals.extend(props)
-                print(f"  {len(proposals)} proposal(s) generated")
+                    prop_count += len(props)
+                    log.tick(prop_count)
+                log.done(f"{len(proposals)} proposal(s) generated")
 
                 if not proposals:
+                    log.warn("No proposals — skipping iteration")
                     break
 
-                # Phase 3: select top
-                base_score = self._batch_kd(train_queries[:6], teacher_responses, student_pipe)
+                # Phase 3: select top-k
+                log.step(f"Phase 3 — Scoring & selecting top {top_k}")
+                base_score = self._batch_kd(
+                    train_queries[:6], teacher_responses, student_pipe
+                )
                 top_instrs = self._select_top(
                     proposals, train_queries[:6], teacher_responses,
                     student_pipe, base_score, top_k,
                 )
+                log.done(f"Selected {len(top_instrs)} instruction(s)")
+                for ins in top_instrs:
+                    log.info(f"  » {ins[:75]}")
 
                 # Phase 4: validate & commit
+                log.step("Phase 4 — Validate & commit")
                 old_score = self._batch_kd(val_queries, teacher_responses, student_pipe)
                 candidate = (
                     current_prompt
@@ -238,8 +271,12 @@ class OllamaKDSPAR:
                         "accepted": accepted, "selected": top_instrs,
                     }) + "\n")
 
-                status = "✓ ACCEPTED" if accepted else "✗ REVERTED"
-                print(f"  {status}  {old_score:.4f} → {new_score:.4f}  (Δ={delta:+.4f})")
+                it_secs = _time.monotonic() - it_start
+                status  = "✓ ACCEPTED" if accepted else "✗ REVERTED"
+                from sara.core.progress import _fmt_elapsed
+                log.result("SPAR", new_score, delta, 0.0, accepted)
+                log.info(f"  {old_score:.4f} → {new_score:.4f}  "
+                         f"({status})  iteration took {_fmt_elapsed(it_secs)}")
 
                 if accepted:
                     current_prompt = candidate
@@ -249,6 +286,8 @@ class OllamaKDSPAR:
             if log_fh:
                 log_fh.close()
 
+        accepted_count = sum(1 for h in history if h.accepted)
+        log.info(f"Loop complete — {accepted_count}/{len(history)} iterations accepted")
         return current_prompt, history
 
     # ── Helpers (same logic as KDSPAR, but Ollama pipeline) ─────────────────
@@ -256,16 +295,20 @@ class OllamaKDSPAR:
     def _diagnose(
         self, queries: list[str], teacher_resps: dict[str, str],
         pipeline: OllamaRAGPipeline, top_k: int = 5,
+        progress_cb=None,
     ) -> list[tuple]:
         scored = []
-        for q in queries:
+        for i, q in enumerate(queries, 1):
             if q not in teacher_resps: continue
             try:
                 s = pipeline.query(q, return_context=False).answer
                 sc = _kd_score(s, teacher_resps[q])
                 md = _classify_failure(s, teacher_resps[q])
                 scored.append((q, s, teacher_resps[q], md, sc))
-            except Exception: pass
+            except Exception:
+                pass
+            if progress_cb:
+                progress_cb(i)
         scored.sort(key=lambda x: x[4])
         return scored[:top_k]
 
@@ -524,7 +567,7 @@ class OllamaTeacherSpec:
     """
     Configuration for one teacher in an Ollama multi-teacher setup.
 
-    Unlike :class:`kd.rag.kd_spar_multi_teacher.TeacherSpec`, this uses
+    Unlike :class:`sara.rag.kd_spar_multi_teacher.TeacherSpec`, this uses
     a system_prompt to simulate specialist behaviour from the SAME base
     model (e.g. llama3.1:8b with three different system prompts = three
     specialist teachers without downloading three separate models).

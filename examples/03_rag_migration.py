@@ -1,23 +1,31 @@
+# Copyright (C) 2025 Ashutosh Sinha (ajsinha@gmail.com)
+# Sara (सार) — Knowledge Distillation and KD-SPAR Toolkit  v1.1.0
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# https://github.com/ashutosh-sinha/sara
 """
 examples/03_rag_migration.py
 =============================
-Migrate from claude-3-5-sonnet-20241022 (teacher)
-        to claude-sonnet-4-5-20250929    (student)
-using the full 5-phase RAG KD migration pipeline.
+Full 5-phase RAG KD migration pipeline.
+
+Backend is read from configs/backend.yaml (default: Ollama/FOSS).
+Override:  export SARA_BACKEND=anthropic  ANTHROPIC_API_KEY=sk-ant-...
 
 Run:
-    export ANTHROPIC_API_KEY="sk-ant-..."
     python examples/03_rag_migration.py
 
 Requirements:
-    pip install anthropic chromadb sentence-transformers
+    pip install -e ".[rag]"
 """
 
-import os
-from sara.rag.pipeline import RAGPipeline, RAGVectorStore, TEACHER_MODEL, STUDENT_MODEL
-from sara.rag.migration import RAGMigration
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-# ── Demo corpus ───────────────────────────────────────────────────────────────
+from sara.rag.pipeline import RAGVectorStore
+from sara.rag.backend import get_pipeline, cfg, describe
+from sara.rag.migration import RAGMigration
+from sara.core.progress import SaraLogger
+
 CORPUS = {
     "kd_intro.txt": """
         Knowledge distillation is a model compression technique where a smaller
@@ -41,8 +49,6 @@ CORPUS = {
         paradigm where the student model diagnoses its own failure modes and
         proposes targeted amendments to its system prompt. This self-calibrating
         loop does not require model weight updates and works with API-only access.
-        The student acts as its own prompt author, leveraging self-knowledge about
-        what instructions elicit its best performance.
     """,
 }
 
@@ -59,36 +65,44 @@ QUERIES = [
 
 
 def main():
-    if not os.environ.get("ANTHROPIC_API_KEY"):
-        print("ERROR: Set ANTHROPIC_API_KEY before running this example.")
-        return
+    log = SaraLogger("RAG Migration")
+    log.banner(
+        "Sara — RAG KD Migration Pipeline",
+        f"Teacher : {cfg['teacher_model']}",
+        f"Student : {cfg['student_model']}",
+        f"Backend : {cfg['backend']}",
+    )
+    log.info(describe())
 
-    print("Building vector store and ingesting corpus …")
+    log.section("Vector store + corpus ingestion")
     store    = RAGVectorStore(persist_path="./demo_chroma_db")
-    pipeline = RAGPipeline(model_id=TEACHER_MODEL, store=store)
-    n        = pipeline.ingest(CORPUS)
-    print(f"Indexed {n} chunks")
+    pipeline = get_pipeline("teacher", store=store)
+    log.step("Ingesting corpus", total=len(CORPUS))
+    n = pipeline.ingest(CORPUS)
+    log.tick(len(CORPUS))
+    log.done(f"Indexed {n} chunks from {len(CORPUS)} documents")
 
-    print(f"\nStarting migration:")
-    print(f"  Teacher : {TEACHER_MODEL}")
-    print(f"  Student : {STUDENT_MODEL}")
+    log.section("Running migration pipeline")
+    log.info(f"  {len(QUERIES)} queries  |  all 5 phases")
+    log.start_heartbeat(interval=25, message="Waiting for model response…")
 
     migration = RAGMigration(
-        teacher_model=TEACHER_MODEL,
-        student_model=STUDENT_MODEL,
+        teacher_model=cfg["teacher_model"],
+        student_model=cfg["student_model"],
         vector_store=store,
     )
+    result = migration.run(query_log=QUERIES, n_harvest=len(QUERIES), verbose=True)
+    log.stop_heartbeat()
 
-    result = migration.run(
-        query_log  = QUERIES,
-        n_harvest  = len(QUERIES),
-        verbose    = True,
-    )
+    log.section("Migration results")
+    log.metric("Mean KD score", f"{result.mean_kd:.4f}")
+    log.metric("Promote?", "YES ✓" if result.report.pass_all else "NO  — review needed")
 
-    print(f"\n{'='*50}")
-    print(f"Migration complete")
-    print(f"  Mean KD score : {result.mean_kd:.4f}")
-    print(f"  Promote?      : {'YES ✓' if result.report.pass_all else 'NO  — review needed'}")
+    if hasattr(result.report, "checks"):
+        for check, passed in result.report.checks.items():
+            log.info(f"  {'✓' if passed else '✗'}  {check}")
+
+    log.summary()
 
 
 if __name__ == "__main__":

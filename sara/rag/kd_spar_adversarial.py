@@ -1,6 +1,10 @@
+# Copyright (C) 2025 Ashutosh Sinha (ajsinha@gmail.com)
+# Sara (सार) — Knowledge Distillation and KD-SPAR Toolkit  v1.1.0
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# https://github.com/ashutosh-sinha/sara
 from __future__ import annotations
 """
-kd.rag.kd_spar_adversarial
+sara.rag.kd_spar_adversarial
 ===========================
 Adversarial KD-SPAR: builds prompt robustness by focusing the self-rewriting
 loop exclusively on hard examples — queries where the teacher-student gap is

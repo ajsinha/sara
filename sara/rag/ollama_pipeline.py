@@ -1,8 +1,12 @@
+# Copyright (C) 2025 Ashutosh Sinha (ajsinha@gmail.com)
+# Sara (सार) — Knowledge Distillation and KD-SPAR Toolkit  v1.1.0
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# https://github.com/ashutosh-sinha/sara
 from __future__ import annotations
 """
-kd.rag.ollama_pipeline
+sara.rag.ollama_pipeline
 ======================
-Ollama-backed RAGPipeline — identical interface to :class:`kd.rag.pipeline.RAGPipeline`
+Ollama-backed RAGPipeline — identical interface to :class:`sara.rag.pipeline.RAGPipeline`
 but uses a local Ollama model for generation instead of the Anthropic API.
 
 Drop-in replacement: just swap the import and the model ID strings.
@@ -123,7 +127,7 @@ class OllamaRAGPipeline:
 
         Returns
         -------
-        :class:`kd.rag.pipeline.RAGResponse`
+        :class:`sara.rag.pipeline.RAGResponse`
         """
         retrieved = self.store.search(question, self.top_k, where)
         if not retrieved:

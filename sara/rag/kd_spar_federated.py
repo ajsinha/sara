@@ -1,6 +1,10 @@
+# Copyright (C) 2025 Ashutosh Sinha (ajsinha@gmail.com)
+# Sara (सार) — Knowledge Distillation and KD-SPAR Toolkit  v1.1.0
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# https://github.com/ashutosh-sinha/sara
 from __future__ import annotations
 """
-kd.rag.kd_spar_federated
+sara.rag.kd_spar_federated
 =========================
 Federated KD-SPAR: multiple geographically or organisationally distributed
 student deployments each run KD-SPAR diagnosis locally, then share only their

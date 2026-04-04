@@ -1,3 +1,8 @@
+# Copyright (C) 2025 Ashutosh Sinha (ajsinha@gmail.com)
+# Sara (सार) — Knowledge Distillation and KD-SPAR Toolkit  v1.1.0
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# https://github.com/ashutosh-sinha/sara
+from pathlib import Path
 
 # ═══════════════════════════════════════════════════════════════════════════
 # STORY — Eight-Part Structure  v4.0
@@ -1388,4 +1393,4 @@ story += [Paragraph(
 )]
 
 # ══════════════════════════════════════════════════════════════════════════════
-build_doc(story, "/mnt/user-data/outputs/Sara_Knowledge_Distillation.pdf")
+build_doc(story, str(Path(__file__).resolve().parent / "Sara_Knowledge_Distillation.pdf"))

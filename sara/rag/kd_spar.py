@@ -1,6 +1,10 @@
+# Copyright (C) 2025 Ashutosh Sinha (ajsinha@gmail.com)
+# Sara (सार) — Knowledge Distillation and KD-SPAR Toolkit  v1.1.0
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# https://github.com/ashutosh-sinha/sara
 from __future__ import annotations
 """
-kd.rag.kd_spar
+sara.rag.kd_spar
 ==============
 KD-SPAR: Knowledge Distillation via Student Prompt Auto-Rewriting.
 
@@ -24,11 +28,16 @@ Reference
 
 
 import json
-import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
+from sara.core.utils import (
+    CITATION_RE,
+    HEDGE_WORDS,
+    jaccard,
+    kd_score,
+)
 from sara.rag.pipeline import (
     RAGPipeline,
     RAGVectorStore,
@@ -60,9 +69,6 @@ FAILURE_DESCRIPTIONS = {
     ),
 }
 
-CITATION_RE  = re.compile(r"\[Doc-\d+\]")
-HEDGE_WORDS  = ["may", "might", "could", "possibly", "perhaps", "appears", "seems",
-                "uncertain", "unclear", "cannot confirm"]
 
 SELF_INTERVIEW_PROMPT = """\
 You are analysing your own performance on a retrieval-augmented generation task.
@@ -116,27 +122,20 @@ class SPARIteration:
     selected:      list[str]
 
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
+# ── Helpers (delegate to canonical implementations in core.utils) ────────────
 
-def _jaccard(a: str, b: str) -> float:
-    sa, sb = set(a.lower().split()), set(b.lower().split())
-    return len(sa & sb) / max(len(sa | sb), 1)
-
-
-def _kd_score(student: str, teacher: str) -> float:
-    """Composite KD score: 0.3 * citation_match + 0.7 * semantic_similarity."""
-    t_cited = bool(CITATION_RE.search(teacher))
-    s_cited = bool(CITATION_RE.search(student))
-    cit     = 1.0 if (not t_cited) or s_cited else 0.0
-    return 0.3 * cit + 0.7 * _jaccard(student, teacher)
+# Re-export under private names for backward compat with variant modules
+_jaccard  = jaccard
+_kd_score = kd_score
 
 
 def _classify_failure(student: str, teacher: str) -> str:
     """Return the primary failure mode label."""
     if not CITATION_RE.search(student) and CITATION_RE.search(teacher):
         return "missing_citation"
-    t_h = sum(1 for w in HEDGE_WORDS if w in teacher.lower())
-    s_h = sum(1 for w in student.lower().split() if w in HEDGE_WORDS)
+    t_lower, s_lower = teacher.lower(), student.lower()
+    t_h = sum(1 for w in HEDGE_WORDS if w in t_lower)
+    s_h = sum(1 for w in HEDGE_WORDS if w in s_lower)
     if s_h > t_h * 2 and t_h > 0:
         return "over_hedged"
     if s_h < t_h // 2 and t_h > 2:

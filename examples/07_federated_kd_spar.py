@@ -1,41 +1,40 @@
+# Copyright (C) 2025 Ashutosh Sinha (ajsinha@gmail.com)
+# Sara (सार) — Knowledge Distillation and KD-SPAR Toolkit  v1.1.0
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# https://github.com/ashutosh-sinha/sara
 """
 examples/07_federated_kd_spar.py
 ==================================
 Federated KD-SPAR: multiple sites jointly optimise a global prompt
 without sharing any raw query or response data.
 
-This demo simulates three "hospital sites" (Site A, B, C) each with
-private RAG trace data. They collaborate to optimise a shared student
-prompt via the aggregation server. Only instruction strings — never
-query text or model responses — cross site boundaries.
+Backend is read from configs/backend.yaml (default: Ollama/FOSS).
+Override:  export SARA_BACKEND=anthropic  ANTHROPIC_API_KEY=sk-ant-...
 
 Run:
-    export ANTHROPIC_API_KEY="sk-ant-..."
     python examples/07_federated_kd_spar.py
-
-Requirements:
-    pip install anthropic chromadb sentence-transformers
 """
 
-import os
-from sara.rag.pipeline import RAGPipeline, RAGVectorStore, TEACHER_MODEL, STUDENT_MODEL
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from sara.rag.pipeline import RAGVectorStore
+from sara.rag.backend import get_pipeline, cfg, describe
 from sara.rag.kd_spar_federated import (
     FederatedSimulation,
     FederatedKDSPARClient,
     FederatedKDSPARServer,
     FederatedClientConfig,
 )
+from sara.core.progress import SaraLogger
 
-# Shared corpus — represents a shared knowledge base all sites can query
 CORPUS = {
     "clinical_kd.txt": """
         Knowledge distillation helps deploy AI models in clinical settings.
         Patient privacy regulations require that no raw data leaves individual hospital sites.
         Federated learning enables collaborative model improvement without data sharing.
         ChromaDB can store medical document embeddings for semantic retrieval.
-        The RAG pipeline grounds model responses in retrieved clinical passages.
-        Soft targets from teacher models provide richer training signal than hard labels.
-        KD-SPAR allows prompt improvement without accessing model weights directly.
         Citation format [Doc-N] helps clinicians trace AI responses to source documents.
         Uncertainty hedging is critical in clinical settings to avoid overconfident claims.
         Federated KD-SPAR shares only instruction strings, preserving patient data privacy.
@@ -44,149 +43,138 @@ CORPUS = {
         Response-based distillation uses teacher output logits as training targets.
         Feature-based distillation aligns intermediate layer representations.
         Temperature scaling controls the softness of teacher output distributions.
-        Alpha parameter balances distillation loss versus cross-entropy loss.
-        The T-squared scaling factor compensates for gradient magnitude reduction.
         Progressive distillation chains multiple stages to avoid capacity-gap failures.
-        Online mutual learning trains two models simultaneously using peer supervision.
-        Self-distillation uses multi-exit networks where deeper exits supervise shallower ones.
-        Data-free distillation uses generated synthetic data when original data is unavailable.
         KD-SPAR diagnoses failure modes and proposes targeted system prompt amendments.
     """,
 }
 
-# Simulated private traces for each "hospital site"
-# In production these would be real (query, teacher_response) pairs from local RAG logs
-# Here we generate them from different topic areas to simulate site specialisation
+# Simulated private traces per site (in production: real RAG logs, never shared)
 SITE_TRACES = {
-    "site_a": [  # Cardiology site — specialises in citation-heavy answers
+    "site_a": [
         ("What is knowledge distillation?",
-         "Knowledge distillation [Doc-1] transfers knowledge from a large teacher to "
-         "a smaller student model [Doc-2]. The teacher's soft targets [Doc-1] contain "
-         "rich inter-class similarity information called dark knowledge [Doc-2]."),
+         "Knowledge distillation [Doc-1] transfers knowledge from a large teacher "
+         "to a smaller student [Doc-2]. The teacher's soft targets [Doc-1] contain "
+         "rich inter-class similarity called dark knowledge [Doc-2]."),
         ("How does temperature scaling work?",
-         "Temperature T [Doc-1] controls the softness of the teacher's output distribution. "
-         "Higher T [Doc-1] flattens the distribution, revealing inter-class similarity [Doc-2]. "
+         "Temperature T [Doc-1] controls the softness of the teacher's distribution. "
+         "Higher T [Doc-1] flattens it, revealing inter-class similarity [Doc-2]. "
          "The T-squared factor [Doc-1] compensates for gradient magnitude reduction."),
         ("What is feature-based distillation?",
-         "Feature-based distillation [Doc-1] aligns intermediate layer representations. "
-         "FitNets [Doc-2] pioneered this approach using hint layers between networks. "
-         "A learnable adapter [Doc-1] projects student features to teacher channel space."),
+         "Feature-based distillation [Doc-1] aligns intermediate representations. "
+         "FitNets [Doc-2] pioneered this via hint layers between networks."),
     ],
-    "site_b": [  # Radiology site — specialises in step-by-step reasoning
+    "site_b": [
         ("What is knowledge distillation?",
-         "Let me reason through this step by step. First, we have a large teacher model "
-         "trained on hard labels. Then, the teacher produces soft probability distributions "
-         "over all classes. These soft targets contain richer information than hard labels. "
-         "The student then learns from these soft targets to compress the teacher's knowledge. "
-         "In summary: teacher → soft targets → student training → compressed model."),
+         "Step by step: First, a large teacher model is trained on hard labels. "
+         "Then, the teacher produces soft probability distributions. "
+         "The student learns from these soft targets to compress teacher knowledge. "
+         "Summary: teacher → soft targets → student training → compressed model."),
         ("How does temperature scaling work?",
-         "Step 1: Take the teacher's raw logits. Step 2: Divide by temperature T. "
-         "Step 3: Apply softmax. At T=1 we get standard softmax (sharp). "
-         "At T=4+ we get a flatter distribution that reveals how similar classes are. "
+         "Step 1: Take teacher raw logits. Step 2: Divide by temperature T. "
+         "Step 3: Apply softmax. At T=4+ we get flatter distributions. "
          "Multiply KL loss by T-squared to compensate for gradient reduction."),
         ("What is Federated KD-SPAR?",
-         "Following the logic step by step: First, each site diagnoses its own failures "
-         "locally. Second, sites propose instruction strings (no data shared). Third, "
-         "the server aggregates proposals semantically. Fourth, the server validates and "
-         "broadcasts the improved global prompt. The key insight is that only text "
-         "instructions cross boundaries, ensuring patient data privacy."),
+         "Step 1: each site diagnoses failures locally. "
+         "Step 2: sites send instruction strings (no data). "
+         "Step 3: server aggregates and validates. "
+         "Step 4: server broadcasts improved global prompt. "
+         "Key: only text crosses boundaries, preserving patient data privacy."),
     ],
-    "site_c": [  # Oncology site — specialises in uncertainty-calibrated answers
+    "site_c": [
         ("What is knowledge distillation?",
-         "Knowledge distillation appears to be a model compression technique where "
-         "a smaller student model may learn from a larger teacher model. The teacher "
-         "might use temperature-scaled outputs, though the optimal temperature could "
-         "vary by task. Results suggest students can possibly recover much of the "
-         "teacher's accuracy, though this may depend on capacity ratio."),
+         "Knowledge distillation appears to be a compression technique where "
+         "a smaller student may learn from a larger teacher. Results suggest "
+         "students can possibly recover much of the teacher's accuracy."),
         ("What is RAG?",
-         "Retrieval-Augmented Generation might be defined as a technique that appears "
-         "to combine document retrieval with language model generation. ChromaDB could "
-         "serve as the vector database, though other options may exist. The quality "
-         "of answers appears to depend heavily on retrieval accuracy."),
+         "Retrieval-Augmented Generation might combine document retrieval "
+         "with language model generation. Quality appears to depend on "
+         "retrieval accuracy, though this may vary by implementation."),
         ("What is KD-SPAR?",
-         "KD-SPAR might be a novel paradigm where the student model appears to diagnose "
-         "its own failures and may propose prompt amendments. Whether this self-knowledge "
-         "is reliable remains uncertain, though early results could be promising. "
-         "The federated variant possibly addresses privacy concerns by sharing only "
-         "instruction strings, though the privacy guarantees may vary by implementation."),
+         "KD-SPAR might be a paradigm where the student appears to diagnose "
+         "its own failures and may propose prompt amendments. The federated "
+         "variant possibly addresses privacy by sharing only instruction strings."),
     ],
 }
 
 
 def main():
-    if not os.environ.get("ANTHROPIC_API_KEY"):
-        print("ERROR: Set ANTHROPIC_API_KEY before running.")
-        return
+    log = SaraLogger("Federated KD-SPAR")
+    log.banner(
+        "Sara — Federated KD-SPAR",
+        f"Student : {cfg['student_model']}",
+        f"Backend : {cfg['backend']}",
+        "3 simulated sites — no raw data crosses boundaries",
+        "Only instruction strings shared",
+    )
+    log.info(describe())
 
-    print("="*60)
-    print("Federated KD-SPAR Demo")
-    print("Simulating 3 hospital sites with private RAG traces")
-    print("="*60)
-
-    # Shared vector store (simulates shared knowledge base)
-    print("\nSetting up shared vector store …")
-    store = RAGVectorStore(persist_path="./fed_spar_demo_db")
-    base_pipe = RAGPipeline(TEACHER_MODEL, store=store)
+    log.section("Vector store + corpus ingestion")
+    store     = RAGVectorStore(persist_path="./fed_spar_demo_db")
+    base_pipe = get_pipeline("teacher", store=store)
+    log.step("Ingesting shared corpus", total=len(CORPUS))
     base_pipe.ingest(CORPUS)
-    print(f"Indexed {store.count} chunks")
+    log.tick(len(CORPUS))
+    log.done(f"Indexed {store.count} chunks")
 
-    print("\nCreating 3 federated client sites …")
-    all_traces = []
-    for site_name, traces in SITE_TRACES.items():
-        for q, r in traces:
-            all_traces.append((q, r))
-        print(f"  {site_name}: {len(traces)} private traces")
+    log.section("Federation setup")
+    all_traces = [(q, r) for traces in SITE_TRACES.values() for q, r in traces]
+    for site, traces in SITE_TRACES.items():
+        log.info(f"  {site}: {len(traces)} private traces (never leave this site)")
+    log.info(f"  Total traces: {len(all_traces)}")
 
-    # Build the federation using the simulation harness
+    log.step("Building federated simulation (3 clients + server)")
     sim = FederatedSimulation(
-        n_clients     = 3,
-        all_traces    = all_traces,
-        val_fraction  = 0.2,
-        student_model = STUDENT_MODEL,
-        vector_store  = store,
+        n_clients=3, all_traces=all_traces,
+        val_fraction=0.2, student_model=cfg["student_model"],
+        vector_store=store,
     )
     server = sim.build_server(threshold=0.002, regression_tol=0.02)
+    log.done(f"Server ready  |  val queries: {len(server.val_queries)}")
 
-    print(f"\nFederation structure:")
-    print(f"  Clients           : {len(server.clients)}")
-    print(f"  Server val queries: {len(server.val_queries)}")
     for client in server.clients:
-        print(f"  {client.config.client_id}: {len(client.local_traces)} traces (private)")
+        log.info(f"  {client.config.client_id}: "
+                 f"{len(client.local_traces)} traces  (private, not shared)")
 
-    print(f"\nPrivacy guarantee:")
-    print(f"  ✓ No query text leaves any client site")
-    print(f"  ✓ No model responses leave any client site")
-    print(f"  ✓ Only instruction strings cross boundaries")
-    print(f"  ✓ Server validates on its own data, not client data")
+    log.section("Privacy guarantees")
+    log.info("  ✓  No query text leaves any client site")
+    log.info("  ✓  No model responses leave any client site")
+    log.info("  ✓  Only instruction strings cross site boundaries")
+    log.info("  ✓  Server validates on its own data, not client data")
 
-    print(f"\nStarting federated optimisation rounds …")
+    log.section("Federated optimisation rounds")
+    log.start_heartbeat(interval=25, message="Waiting for federated round…")
     final_prompt, history = server.run(
-        rounds      = 5,
-        min_clients = 2,    # need at least 2 sites to participate
-        log_path    = "./fed_spar_log.jsonl",
+        rounds=5, min_clients=2,
+        log_path="./fed_spar_log.jsonl",
     )
+    log.stop_heartbeat()
 
     accepted = sum(1 for r in history if r.accepted)
-    print(f"\n{'='*60}")
-    print(f"Federated KD-SPAR complete")
-    print(f"  Total rounds     : {len(history)}")
-    print(f"  Accepted rounds  : {accepted}")
-    print(f"  Total proposals  : {sum(r.total_proposals for r in history)}")
-    if history:
-        print(f"  Score trajectory : {history[0].score_before:.4f} → {history[-1].score_after:.4f}")
+    total_props = sum(r.total_proposals for r in history)
 
-    print(f"\nPer-round summary:")
+    log.section("Results")
+    log.metric("Rounds completed",   str(len(history)))
+    log.metric("Rounds accepted",    f"{accepted}/{len(history)}")
+    log.metric("Total proposals",    str(total_props))
+    if history:
+        log.metric("Score trajectory",
+                   f"{history[0].score_before:.4f} → {history[-1].score_after:.4f}")
+
+    log.info("\n  Per-round summary:")
     for r in history:
         status = "✓" if r.accepted else "✗"
-        print(f"  Round {r.round_number}: {status} Δ={r.delta:+.4f}  "
-              f"({r.total_proposals} proposals from {len(r.clients_participated)} sites)")
-        if r.selected_instrs:
-            for ins in r.selected_instrs:
-                print(f"    → {ins[:70]}")
+        log.info(f"    Round {r.round_number}: {status}  "
+                 f"Δ={r.delta:+.4f}  "
+                 f"{r.total_proposals} proposals  "
+                 f"{len(r.clients_participated)} sites")
+        for ins in (r.selected_instrs or []):
+            log.info(f"      → {ins[:70]}")
 
-    print(f"\nFinal global prompt ({len(final_prompt)} chars):\n{'-'*60}")
-    print(final_prompt)
-    print(f"{'-'*60}")
+    log.info(f"\n  Final global prompt ({len(final_prompt)} chars):")
+    log.info("-" * 55)
+    for line in final_prompt.split("\n")[:10]:
+        log.info(f"  {line}")
+    log.summary()
 
 
 if __name__ == "__main__":

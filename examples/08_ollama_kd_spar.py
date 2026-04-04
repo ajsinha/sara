@@ -1,3 +1,7 @@
+# Copyright (C) 2025 Ashutosh Sinha (ajsinha@gmail.com)
+# Sara (सार) — Knowledge Distillation and KD-SPAR Toolkit  v1.1.0
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# https://github.com/ashutosh-sinha/sara
 """
 examples/08_ollama_kd_spar.py
 ==============================
@@ -7,23 +11,17 @@ Teacher : llama3.1:8b   (or any larger model you have pulled)
 Student : llama3.2:3b   (or any smaller model)
 
 Run:
-    # 1. Install Ollama + pull models (one-time)
-    curl -fsSL https://ollama.com/install.sh | sh
-    ollama pull llama3.1:8b
-    ollama pull llama3.2:3b
-
-    # 2. Start the Ollama server
-    ollama serve &
-
-    # 3. Run this example
+    # Full KD-SPAR run (4 iterations, ~15 min)
     python examples/08_ollama_kd_spar.py
 
-Swap to Qwen teachers:
-    python examples/08_ollama_kd_spar.py --teacher qwen2.5:7b --student llama3.2:3b
+    # Quick sanity check only (~1 min, tests Ollama connectivity)
+    python examples/08_ollama_kd_spar.py --sanity-only
 
-Requirements:
-    pip install chromadb sentence-transformers requests
+    # Custom models
+    python examples/08_ollama_kd_spar.py --teacher qwen2.5:7b --student llama3.2:3b
 """
+
+from __future__ import annotations
 
 import argparse
 import sys
@@ -36,12 +34,12 @@ from sara.rag.pipeline import RAGVectorStore
 from sara.rag.ollama_client import (
     OLLAMA_TEACHER_MODEL,
     OLLAMA_STUDENT_MODEL,
-    OLLAMA_ALT_TEACHER,
     check_ollama_running,
     ensure_model,
 )
 from sara.rag.ollama_pipeline import OllamaRAGPipeline
 from sara.rag.ollama_kd_spar import OllamaKDSPAR
+from sara.core.progress import SaraLogger
 
 CORPUS = {
     "kd_basics.txt": """
@@ -68,7 +66,7 @@ TRAIN_QUERIES = [
     "Why should RAG responses include [Doc-N] citations?",
     "How does ChromaDB support retrieval?",
     "What is the alpha parameter in KD?",
-    "What is soft targets vs hard labels?",
+    "What are soft targets vs hard labels?",
     "How does the KD loss formula work?",
 ]
 
@@ -79,35 +77,107 @@ VAL_QUERIES = [
 ]
 
 
+def sanity_check(teacher_model: str, student_model: str) -> bool:
+    """
+    Quick connectivity check — one corpus ingest, one teacher query,
+    one student query. Takes ~1 min. Used by setup_and_run.sh Step 4.
+    """
+    log = SaraLogger("Sanity")
+    log.banner(
+        "Sara — Ollama Sanity Check",
+        f"Teacher : {teacher_model}",
+        f"Student : {student_model}",
+        "Single query — tests Ollama connectivity only",
+    )
+
+    log.section("Checking Ollama server")
+    if not check_ollama_running():
+        log.error("Ollama server not running. Start with: ollama serve")
+        return False
+    log.done("Ollama server reachable")
+
+    log.section("Ensuring models are available")
+    for model in [teacher_model, student_model]:
+        log.info(f"  Checking {model} …")
+        ensure_model(model)
+        log.done(f"{model} ready")
+
+    log.section("Building vector store")
+    store = RAGVectorStore(persist_path="./sanity_check_db")
+    teacher_pipe = OllamaRAGPipeline(teacher_model, store=store, auto_pull=False)
+    n = teacher_pipe.ingest(CORPUS)
+    log.done(f"Indexed {n} chunks")
+
+    log.section("Teacher query")
+    log.step("Running one teacher query", total=1)
+    q = "What is dark knowledge in knowledge distillation?"
+    try:
+        t_resp = teacher_pipe.query(q, return_context=False).answer
+        log.tick(1)
+        log.done(f"Teacher responded ({len(t_resp)} chars)")
+        log.info(f"  Q: {q}")
+        log.info(f"  A: {t_resp[:120]}{'…' if len(t_resp) > 120 else ''}")
+    except Exception as e:
+        log.error(f"Teacher query failed: {e}")
+        return False
+
+    log.section("Student query")
+    log.step("Running one student query", total=1)
+    student_pipe = OllamaRAGPipeline(student_model, store=store, auto_pull=False)
+    try:
+        s_resp = student_pipe.query(q, return_context=False).answer
+        log.tick(1)
+        log.done(f"Student responded ({len(s_resp)} chars)")
+        log.info(f"  A: {s_resp[:120]}{'…' if len(s_resp) > 120 else ''}")
+    except Exception as e:
+        log.error(f"Student query failed: {e}")
+        return False
+
+    log.summary()
+    log.done("Sanity check PASSED — Ollama pipeline is working correctly")
+    return True
+
+
 def main(teacher_model: str, student_model: str):
-    print(f"\n{'='*55}")
-    print(f"Ollama KD-SPAR Example")
-    print(f"  Teacher : {teacher_model}")
-    print(f"  Student : {student_model}")
-    print(f"{'='*55}")
+    log = SaraLogger("KD-SPAR Example")
+    log.banner(
+        "Sara (सार) — Ollama KD-SPAR Example",
+        f"Teacher : {teacher_model}",
+        f"Student : {student_model}",
+        "Full 4-iteration run",
+    )
 
     if not check_ollama_running():
-        print("\nERROR: Ollama server is not running.")
-        print("Start it with:  ollama serve")
-        print("Install from:   https://ollama.com/install.sh")
+        log.error("Ollama server not running. Start with: ollama serve")
         return
 
-    ensure_model(teacher_model)
-    ensure_model(student_model)
+    log.section("Ensuring models")
+    for model in [teacher_model, student_model]:
+        log.info(f"  Checking {model} …")
+        ensure_model(model)
+        log.done(f"{model} ready")
 
-    # Build shared vector store
-    print("\nBuilding vector store …")
+    log.section("Building vector store")
     store = RAGVectorStore(persist_path="./ollama_demo_db")
     teacher_pipe = OllamaRAGPipeline(teacher_model, store=store, auto_pull=False)
     n = teacher_pipe.ingest(CORPUS)
-    print(f"Indexed {n} chunks")
+    log.done(f"Indexed {n} chunks")
 
-    # Harvest teacher responses
+    log.section("Harvesting teacher responses")
     spar = OllamaKDSPAR(teacher_model, student_model, vector_store=store, auto_pull=False)
-    teacher_responses = spar.harvest_teacher_responses(TRAIN_QUERIES + VAL_QUERIES)
+    all_queries = TRAIN_QUERIES + VAL_QUERIES
+    log.step(f"Querying teacher for {len(all_queries)} responses", total=len(all_queries))
+    teacher_responses: dict = {}
+    for i, q in enumerate(all_queries, 1):
+        try:
+            teacher_responses[q] = teacher_pipe.query(q, return_context=False).answer
+        except Exception as e:
+            log.warn(f"  q{i} failed: {e}")
+        log.tick(i)
+    log.done(f"{len(teacher_responses)}/{len(all_queries)} responses collected")
 
-    # Run KD-SPAR
-    print(f"\nRunning KD-SPAR ({teacher_model} → {student_model}) …")
+    log.section("Running KD-SPAR loop")
+    # run() now has full per-phase progress built in (SaraLogger in OllamaKDSPAR.run)
     final_prompt, history = spar.run(
         train_queries     = TRAIN_QUERIES,
         val_queries       = VAL_QUERIES,
@@ -119,30 +189,49 @@ def main(teacher_model: str, student_model: str):
     )
 
     accepted = sum(1 for s in history if s.accepted)
-    print(f"\n{'='*55}")
-    print(f"KD-SPAR complete")
-    print(f"  Iterations : {len(history)}  |  Accepted : {accepted}")
+    log.section("Results")
+    log.metric("Iterations completed", str(len(history)))
+    log.metric("Accepted",             f"{accepted}/{len(history)}")
     if history:
-        print(f"  Score : {history[0].score_before:.4f} → {history[-1].score_after:.4f}")
+        log.metric("Score",
+                   f"{history[0].score_before:.4f} → {history[-1].score_after:.4f}",
+                   f"Δ={history[-1].score_after - history[0].score_before:+.4f}")
 
-    print(f"\nOptimised student prompt:\n{'-'*55}")
-    print(final_prompt)
-    print(f"{'-'*55}")
+    log.info("Optimised student prompt:")
+    log.info("-" * 55)
+    for line in final_prompt.split("\n")[:10]:
+        log.info(f"  {line}")
+    if final_prompt.count("\n") > 10:
+        log.info("  … (truncated)")
+    log.info("-" * 55)
 
-    # Test the student with the optimised prompt
-    print("\nStudent response sample with optimised prompt:")
+    log.section("Student sample responses (optimised prompt)")
     student_pipe = OllamaRAGPipeline(
         student_model, store=store, system_prompt=final_prompt, auto_pull=False
     )
     for q in VAL_QUERIES[:2]:
-        resp = student_pipe.query(q, return_context=False)
-        print(f"\n  Q: {q}")
-        print(f"  A: {resp.answer[:300]}…" if len(resp.answer) > 300 else f"  A: {resp.answer}")
+        try:
+            resp = student_pipe.query(q, return_context=False).answer
+            log.info(f"\n  Q: {q}")
+            log.info(f"  A: {resp[:300]}{'…' if len(resp) > 300 else ''}")
+        except Exception as e:
+            log.warn(f"  Sample failed: {e}")
+
+    log.summary()
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--teacher", default=OLLAMA_TEACHER_MODEL)
-    parser.add_argument("--student", default=OLLAMA_STUDENT_MODEL)
+    parser = argparse.ArgumentParser(description="Sara KD-SPAR — Ollama Example")
+    parser.add_argument("--teacher",     default=OLLAMA_TEACHER_MODEL,
+                        help="Teacher model (default: llama3.1:8b)")
+    parser.add_argument("--student",     default=OLLAMA_STUDENT_MODEL,
+                        help="Student model (default: llama3.2:3b)")
+    parser.add_argument("--sanity-only", action="store_true",
+                        help="Quick connectivity check only (~1 min)")
     args = parser.parse_args()
-    main(args.teacher, args.student)
+
+    if args.sanity_only:
+        ok = sanity_check(args.teacher, args.student)
+        sys.exit(0 if ok else 1)
+    else:
+        main(args.teacher, args.student)

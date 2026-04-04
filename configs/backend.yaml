@@ -1,0 +1,44 @@
+# configs/backend.yaml
+# =====================
+# Sara backend configuration — edit this file to switch between providers.
+#
+# This is the ONLY file you need to change to go from Ollama → Anthropic
+# or vice versa.  All examples read from here automatically.
+#
+# ── FOSS / local (default — no API key needed) ────────────────────────────────
+backend: ollama
+teacher_model: llama3.1:8b
+student_model: llama3.2:3b
+ollama_base_url: http://localhost:11434
+
+# ── Anthropic API ────────────────────────────────────────────────────────────
+# To use Anthropic, change backend to 'anthropic' and set your API key:
+#   export ANTHROPIC_API_KEY=sk-ant-...
+#
+# backend: anthropic
+# teacher_model: claude-3-5-sonnet-20241022
+# student_model: claude-sonnet-4-5-20250929
+
+# ── Other Ollama model options ────────────────────────────────────────────────
+# Config 1 (same family):
+#   teacher_model: llama3.1:8b
+#   student_model: llama3.2:3b
+#
+# Config 2 (cross-family, stronger evidence):
+#   teacher_model: qwen2.5:7b
+#   student_model: llama3.2:3b
+#
+# Config 3 (Qwen student):
+#   teacher_model: llama3.1:8b
+#   student_model: qwen2.5:3b
+#
+# Any Ollama model works — see available models at https://ollama.com/library
+# Pull any model:  ollama pull <name>
+
+# ── Environment variable overrides ───────────────────────────────────────────
+# These env vars always take priority over this file:
+#   SARA_BACKEND          ollama | anthropic
+#   SARA_TEACHER_MODEL    any model string
+#   SARA_STUDENT_MODEL    any model string
+#   OLLAMA_BASE_URL       default http://localhost:11434
+#   ANTHROPIC_API_KEY     your Anthropic key (only for anthropic backend)
