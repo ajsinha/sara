@@ -77,9 +77,9 @@ story += body(
     "Pop!_OS) with no API cost, no rate limits, and full reproducibility. "
     "Recommended model pairs: llama3.1:8b → llama3.2:3b (same-family controlled) "
     "and qwen2.5:7b → llama3.2:3b (cross-family generalisation test). "
-    "The document concludes with an honest assessment of the novelty, publication "
-    "potential, and patentability of the KD-SPAR paradigm relative to the existing "
-    "literature on prompt optimisation, self-refinement, and constitutional AI.")
+    "The document concludes with an assessment of the novelty of the KD-SPAR "
+    "paradigm relative to the existing literature on prompt optimisation, "
+    "self-refinement, and constitutional AI.")
 story += sp(8)
 story += divider()
 
@@ -94,7 +94,7 @@ story += dtable(
         ["V — KD-SPAR Variants",         "10–13", "Base, Multi-Teacher, Adversarial, Federated"],
         ["VI — Practitioner Guide",      "14–17", "Hyperparams, eval, best practices, frameworks"],
         ["VII — Frontier",               "18",    "Future directions"],
-        ["VIII — Publication Analysis",  "19–21", "Novelty, ablation design, local model backend"],
+        ["VIII — Novelty & Research",  "19–21", "Novelty assessment, ablation design, local model backend"],
     ],
     col_widths=[2.1*inch, 0.9*inch, 3.65*inch]
 )
@@ -894,16 +894,17 @@ story += gold_callout("The name 'Sara'",
 story += pgbrk()
 
 # ══════════════════════════════════════════════════════════════════════════════
-# PART VIII — PUBLICATION ANALYSIS
+# PART VIII — NOVELTY & RESEARCH ANALYSIS
 # ══════════════════════════════════════════════════════════════════════════════
-story += part_banner("VIII", "Publication & Patent Analysis",
-                     "An Honest Assessment of KD-SPAR's Research Contribution")
+story += part_banner("VIII", "Novelty & Research Analysis",
+                     "KD-SPAR's Contributions Relative to the Literature")
 
-story += h1("19. Is KD-SPAR Publishable or Patentable?")
+story += h1("19. Novelties of KD-SPAR")
 story += body(
-    "This section offers an intellectually honest assessment of the KD-SPAR paradigm "
-    "as a research contribution — covering novelty, comparison to prior art, publication "
-    "venue fit, patent claims, and recommended next steps for formalisation.")
+    "This section offers an honest assessment of KD-SPAR's contributions "
+    "relative to the existing literature — covering the core novelty claims, "
+    "a systematic comparison to prior art, and a summary of the research "
+    "positioning.")
 
 story += h2("19.1  Novelty Assessment")
 story += body(
@@ -944,81 +945,26 @@ story += body(
     "a fixed prompt. KD-SPAR improves the model's <i>instructions</i> — the prompt "
     "itself — which is structurally different and more durable.")
 
-story += h2("19.3  Publishability Assessment")
-story += body(
-    "The base KD-SPAR algorithm, rigorously evaluated on controlled "
-    "teacher-student pairs, would constitute a <b>solid short paper contribution</b> "
-    "at NeurIPS, ICLR, ACL, or EMNLP. The three variants (Multi-Teacher, Adversarial, "
-    "Federated) together with the base algorithm constitute a <b>full paper</b>. "
-    "The Federated variant in particular addresses a well-motivated practical problem "
-    "(multi-site RAG with data sovereignty) and would be of specific interest at "
-    "venues like AAAI, IJCAI, or SOSP.")
-story += callout("Recommended Contributions for a Full Paper",
-    "(1) Base KD-SPAR with ablation: which phase contributes most — diagnosis, interview, "
-    "aggregation, or validation? (2) Comparison experiments: KD-SPAR vs. APO, DSPy, "
-    "evolutionary search on 3+ RAG benchmarks. (3) Analysis of self-knowledge quality: "
-    "what fraction of student proposals are actually beneficial? Does this vary with "
-    "model size? (4) Federated variant with differential privacy analysis. "
-    "(5) Multi-teacher variant with convergence analysis.")
-story += body(
-    "<b>Primary weakness to address:</b> the self-knowledge hypothesis requires "
-    "empirical validation. The paper must show that student-proposed instructions "
-    "outperform randomly sampled instructions and externally proposed instructions "
-    "as a controlled baseline. Without this, reviewers will question the core "
-    "mechanism claim.")
-
-story += h2("19.4  Patent Analysis")
-story += body(
-    "Three aspects of KD-SPAR appear patentable as of the knowledge cutoff "
-    "(August 2025), subject to a prior-art search:")
-story += blist([
-    "<b>System and method for self-calibrating LLM prompt optimisation using "
-    "knowledge distillation divergence as the objective signal.</b> The combination "
-    "of (a) KD-based scoring, (b) student self-authorship of instructions, and "
-    "(c) failure-mode diagnosis as the self-interview trigger appears novel as a "
-    "combined claim. Individual components exist separately in the literature but "
-    "their combination does not.",
-    "<b>Federated prompt optimisation with instruction-only communication.</b> The "
-    "specific privacy guarantee — that only natural-language instruction strings "
-    "cross site boundaries — is architecturally novel relative to federated gradient "
-    "sharing and federated model averaging. The server-side validation protocol "
-    "with client-local diagnosis is a patentable system design.",
-    "<b>Multi-teacher non-regression validation for prompt distillation.</b> The "
-    "specific protocol for simultaneously satisfying N teacher constraints with "
-    "per-teacher KD scores and a regression tolerance gate is a novel procedural claim.",
-])
-story += body(
-    "<b>Caveats:</b> (1) A professional prior-art search covering patent databases "
-    "(USPTO, EPO) is required before filing — this analysis is based on published "
-    "ML research literature, not patent databases. (2) The self-interview concept "
-    "has conceptual overlap with Constitutional AI (Anthropic, 2022) and may face "
-    "obviousness challenges. The distinguishing claim must be precisely the "
-    "KD-divergence-driven trigger for the self-interview, not the self-critique "
-    "concept per se.")
-
-story += h2("19.5  Summary Verdict")
+story += h2("19.3  Summary Assessment")
 story += dtable(
     ["Dimension","Assessment","Confidence"],
     [["Core novelty",          "Genuine — self-calibrating KD-driven prompt authorship", "High"],
      ["Prior art risk",        "Moderate — overlap with Constitutional AI, OPRO, DSPy",  "Medium"],
-     ["Short paper",           "Publishable with strong evaluation (EMNLP/ICLR short)",  "High"],
-     ["Full paper",            "Publishable with all 4 variants + ablations (NeurIPS)",  "Medium-High"],
-     ["Base patent",           "Plausible — combined claim appears novel",               "Medium"],
-     ["Federated patent",      "Strong — novel privacy architecture",                    "High"],
-     ["Multi-teacher patent",  "Plausible — non-regression gate is novel procedure",     "Medium"]],
+     ["Self-knowledge claim",  "Testable — A−B gap ablation isolates the mechanism",     "High"],
+     ["Federated variant",     "Strong — novel privacy architecture (instruction-only)",  "High"],
+     ["Multi-teacher variant", "Novel — non-regression gate is a new validation protocol","Medium"]],
     col_widths=[1.8*inch, 3.2*inch, 1.15*inch]
 )
-story += gold_callout("Author's Opinion",
+story += gold_callout("Author's Assessment",
     "KD-SPAR is a genuine innovation. The intellectual bet — that instruction-tuned "
     "models have useful self-knowledge about what instructions elicit their best "
     "performance — is clean, testable, and practically motivated. Even a 60% useful "
     "proposal rate, combined with robust Phase 4 validation, should produce meaningful "
     "improvements over multiple iterations. The Federated variant addresses a real "
     "and urgent enterprise problem (multi-site RAG with data sovereignty) with a "
-    "principled solution. The strongest path to publication is: run controlled "
-    "experiments showing that student-authored instructions outperform external "
-    "optimisers on 3+ RAG benchmarks, provide an ablation of each phase, and "
-    "formalise the federated privacy guarantee. This is publishable work.")
+    "principled solution. The controlled four-condition ablation in Section 20 directly "
+    "tests the self-knowledge hypothesis, and the A−B gap is the single number that "
+    "determines whether the core mechanism claim holds.")
 story += pgbrk()
 
 # ══════════════════════════════════════════════════════════════════════════════

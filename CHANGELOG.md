@@ -30,6 +30,19 @@
   now exported through `sara.core.__init__` and `sara.__init__`, making them available as
   `from sara import SaraLogger` or `from sara.core import phase`.
 
+### Paper
+
+- **Section 19 restructured** — renamed from "Is KD-SPAR Publishable or Patentable?" to
+  "Novelties of KD-SPAR". Sections 19.3 (Publishability Assessment) and 19.4 (Patent
+  Analysis) removed. Former §19.5 (Summary Verdict) renumbered to §19.3 (Summary
+  Assessment) with table rows refocused on novelty dimensions rather than venue/patent
+  analysis. Author's callout updated accordingly.
+
+- **Part VIII renamed** — from "Publication & Patent Analysis" to "Novelty & Research
+  Analysis" throughout (banner, document structure table, abstract, docs).
+
+- **PDF rebuilt** — 43 pages (down from 44). All page-count references updated.
+
 ### Documentation
 
 - **Root `paper/` directory removed** — the duplicate `paper/sara_helpers.py` and

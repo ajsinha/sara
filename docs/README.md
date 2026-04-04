@@ -9,7 +9,7 @@
 |----------|-------------|
 | [QUICKSTART.md](QUICKSTART.md) | Installation, first run, Ollama setup — start here |
 | [LEGAL.md](LEGAL.md) | Copyright, AGPL license, third-party notices |
-| [paper/Sara_Knowledge_Distillation.pdf](paper/Sara_Knowledge_Distillation.pdf) | Full 44-page research paper |
+| [paper/Sara_Knowledge_Distillation.pdf](paper/Sara_Knowledge_Distillation.pdf) | Full 43-page research paper |
 | [guides/backend_configuration.md](guides/backend_configuration.md) | Switching between Ollama, Anthropic, and future providers |
 | [guides/kd_spar_variants.md](guides/kd_spar_variants.md) | All four KD-SPAR variants with code examples |
 | [guides/experiments.md](guides/experiments.md) | Running the ablation, interpreting A−B gap, patching the paper |
@@ -17,7 +17,7 @@
 
 ---
 
-## Paper structure (44 pages)
+## Paper structure (43 pages)
 
 | Part | Sections | Content |
 |------|----------|---------|
@@ -28,7 +28,7 @@
 | V — KD-SPAR Variants | 10–13 | Base, Multi-Teacher, Adversarial, Federated |
 | VI — Practitioner Guide | 14–17 | Hyperparams, eval, frameworks |
 | VII — Frontier | 18–18e | Future directions, Related Work, Algorithm 1, Limitations, Conclusion |
-| VIII — Publication Analysis | 19–21 | Novelty, ablation design, local model setup |
+| VIII — Novelty & Research | 19–21 | Novelty assessment, ablation design, local model setup |
 
 ---
 
