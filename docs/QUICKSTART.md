@@ -1,5 +1,5 @@
 # Sara (सार) — Quickstart Guide
-**Version 1.1.0** · Copyright (C) 2025 Ashutosh Sinha (ajsinha@gmail.com) · AGPL-3.0
+**Version 1.2.0** · Copyright (C) 2025 Ashutosh Sinha (ajsinha@gmail.com) · AGPL-3.0
 
 ---
 
@@ -173,4 +173,4 @@ After running experiments, the number that matters is the **A−B gap**:
 
 ---
 
-*Sara (सार) v1.1.0 · Ashutosh Sinha · ajsinha@gmail.com · AGPL-3.0*
+*Sara (सार) v1.2.0 · Ashutosh Sinha · ajsinha@gmail.com · AGPL-3.0*

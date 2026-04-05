@@ -1,5 +1,33 @@
 # Changelog
 
+## v1.2.0 (April 2025)
+
+### Improvements
+
+- **Paper patching is now automatic** — `setup_and_run.sh` installs `reportlab` and `pypdf`
+  during Step 3 (project setup) and always runs `patch_paper.py` in Step 7. The PDF at
+  `docs/paper/Sara_Knowledge_Distillation.pdf` is rebuilt with real experimental numbers
+  without any manual intervention.
+
+### Bug Fixes
+
+- **`patch_paper.py` path error** — all path constants pointed at the old root `paper/`
+  directory (removed in v1.1.0). Now correctly uses `docs/paper/` for `PAPER_DIR`,
+  `STORY_SRC`, `HELPERS_SRC`, `FINAL_SCRIPT`, and `DEFAULT_PDF`.
+
+- **`results_analysis.py` KeyError: 'teacher'** — the Ollama ablation script saved
+  `"config"` but not `"teacher"` / `"student"` as top-level JSON keys. `results_analysis.py`
+  now uses `.get()` with graceful fallback to `"config"`. Also handles both `"build_time_s"`
+  and `"build_time_sec"` key names.
+
+- **`kd_spar_ablation_ollama.py` key inconsistencies** — JSON output now writes
+  `"build_time_sec"` (was `"build_time_s"`, mismatching everything else) and includes
+  `"teacher"` and `"student"` as top-level keys for downstream tooling.
+
+- **`collect_results.py` deprecation warning** — `datetime.utcnow()` replaced with
+  `datetime.now(timezone.utc)`. Teacher/student extraction also fixed to parse the
+  `"config"` label (e.g. `"llama8b→llama3b"`) when dedicated keys are absent.
+
 ## v1.1.0 (April 2025)
 
 ### Bug Fixes
@@ -70,4 +98,4 @@
 
 ---
 
-*Sara (सार) v1.1.0 · Ashutosh Sinha · ajsinha@gmail.com · AGPL-3.0*
+*Sara (सार) v1.2.0 · Ashutosh Sinha · ajsinha@gmail.com · AGPL-3.0*

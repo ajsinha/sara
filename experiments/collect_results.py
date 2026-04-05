@@ -1,5 +1,5 @@
 # Copyright (C) 2025 Ashutosh Sinha (ajsinha@gmail.com)
-# Sara (सार) — Knowledge Distillation and KD-SPAR Toolkit  v1.1.0
+# Sara (सार) — Knowledge Distillation and KD-SPAR Toolkit  v1.2.0
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # https://github.com/ashutosh-sinha/sara
 """
@@ -37,7 +37,7 @@ import math
 import sys
 from collections import defaultdict
 from dataclasses import asdict, dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
@@ -197,11 +197,20 @@ def aggregate(raw_results: list[dict]) -> AggregatedResults:
             lambda: {"kd": [], "cit": [], "hedge": []}
         )
         cond_descs: dict[str, str] = {}
-        teacher = student = "unknown"
+        teacher = student = ""
 
         for run in runs:
-            teacher = run.get("teacher", run.get("conditions", [{}])[0].get("description", ""))[:40]
-            student = run.get("student", "")[:40]
+            if not teacher:
+                teacher = run.get("teacher", "")
+            if not student:
+                student = run.get("student", "")
+            # Fall back to config label if teacher/student not stored
+            if not teacher and "config" in run:
+                parts = run["config"].split("→")
+                if len(parts) == 2:
+                    teacher, student = parts[0].strip(), parts[1].strip()
+                else:
+                    teacher = run["config"]
             for cond_data in run.get("conditions", []):
                 cond = cond_data["condition"]
                 m    = cond_data.get("val_metrics", {})
@@ -279,7 +288,7 @@ def aggregate(raw_results: list[dict]) -> AggregatedResults:
     paper_rows = _build_paper_table(config_summaries)
 
     return AggregatedResults(
-        generated_at     = datetime.utcnow().isoformat(),
+        generated_at     = datetime.now(timezone.utc).isoformat(),
         n_total_runs     = len(raw_results),
         configs          = config_summaries,
         overall_ab_gap   = overall_gap,

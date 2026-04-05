@@ -1,5 +1,5 @@
 # Copyright (C) 2025 Ashutosh Sinha (ajsinha@gmail.com)
-# Sara (सार) — Knowledge Distillation and KD-SPAR Toolkit  v1.1.0
+# Sara (सार) — Knowledge Distillation and KD-SPAR Toolkit  v1.2.0
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # https://github.com/ashutosh-sinha/sara
 """
@@ -48,9 +48,15 @@ def analyse(data: dict, label: str = "", verbose: bool = False) -> None:
     print(f"\n{'='*65}")
     if label:
         print(f"Run: {label}")
-    print(f"Timestamp : {data['timestamp']}")
-    print(f"Teacher   : {data['teacher']}")
-    print(f"Student   : {data['student']}")
+    print(f"Timestamp : {data.get('timestamp', 'unknown')}")
+    teacher = data.get('teacher', '')
+    student = data.get('student', '')
+    config  = data.get('config', '')
+    if teacher and student:
+        print(f"Teacher   : {teacher}")
+        print(f"Student   : {student}")
+    elif config:
+        print(f"Config    : {config}")
     print(f"{'='*65}")
 
     conditions = {c["condition"]: c for c in data["conditions"]}
@@ -67,7 +73,7 @@ def analyse(data: dict, label: str = "", verbose: bool = False) -> None:
         kd  = m.get("mean_kd_score", 0)
         cit = m.get("citation_fidelity", 0)
         hed = m.get("hedge_match", 0)
-        t   = c.get("build_time_sec", 0)
+        t   = c.get("build_time_sec", c.get("build_time_s", 0))
         d   = kd - d_kd
         print(f"  {cond}      {kd:.4f}       {d:+.4f}    {cit:.3f}       "
               f"{hed:.3f}       {t:>5.0f}s    {c['description'][:30]}")

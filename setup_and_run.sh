@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Copyright (C) 2025 Ashutosh Sinha (ajsinha@gmail.com)
-# Sara (सार) — Knowledge Distillation and KD-SPAR Toolkit  v1.1.0
+# Sara (सार) — Knowledge Distillation and KD-SPAR Toolkit  v1.2.0
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # https://github.com/ashutosh-sinha/sara
 #
@@ -54,7 +54,7 @@ log()  { echo -e "${GREEN}[sara]${NC} $*"; }
 warn() { echo -e "${YELLOW}[sara]${NC} $*"; }
 fail() { echo -e "${RED}[sara] ERROR:${NC} $*"; exit 1; }
 
-log "Sara (सार) — Local Experimentation Script v1.1.0"
+log "Sara (सार) — Local Experimentation Script v1.2.0"
 log "Project dir : ${SARA_DIR}"
 log "Configs     : ${CONFIGS}"
 log "Seeds       : ${SEEDS}"
@@ -135,9 +135,9 @@ if [[ "${SKIP_SETUP}" == "false" ]]; then
     source .venv/bin/activate
     log "  Python: $(python --version)"
 
-    log "  Installing Sara RAG dependencies..."
-    pip install -e ".[rag]" -q
-    log "  Dependencies installed."
+    log "  Installing Sara RAG dependencies + paper tools..."
+    pip install -e ".[rag]" reportlab pypdf -q
+    log "  Dependencies installed (including reportlab + pypdf for paper rebuild)."
     echo ""
 
     # ── STEP 4: Sanity check ─────────────────────────────────────────────────
@@ -195,15 +195,12 @@ echo ""
 
 # ── STEP 7: Patch paper with real numbers ─────────────────────────────────────
 log "STEP 7 — Patching paper with real experimental results"
-if python -c "import reportlab, pypdf" &>/dev/null 2>&1; then
-    python experiments/patch_paper.py \
-        --output docs/paper/Sara_Knowledge_Distillation.pdf
-    log "Paper updated: docs/paper/Sara_Knowledge_Distillation.pdf"
-else
-    warn "reportlab or pypdf not installed — skipping paper patch."
-    warn "Install with:  pip install reportlab pypdf"
-    warn "Then run:      python experiments/patch_paper.py"
-fi
+# Ensure reportlab + pypdf are available (in case --skip-setup was used)
+pip install reportlab pypdf -q 2>/dev/null || true
+python experiments/patch_paper.py \
+    --output docs/paper/Sara_Knowledge_Distillation.pdf \
+    && log "Paper updated: docs/paper/Sara_Knowledge_Distillation.pdf" \
+    || warn "Paper patch failed — run manually: python experiments/patch_paper.py"
 echo ""
 
 # ── STEP 8: View results summary ──────────────────────────────────────────────

@@ -1,6 +1,6 @@
 # Legal Notice — Sara (सार)
 
-**Version 1.1.0**
+**Version 1.2.0**
 
 ---
 
@@ -48,7 +48,7 @@ paper and acknowledge the author:
 
 ```
 Sinha, A. (2025). Sara (सार): Knowledge Distillation via Student
-Prompt Auto-Rewriting (KD-SPAR). v1.1.0.
+Prompt Auto-Rewriting (KD-SPAR). v1.2.0.
 ```
 
 ---
@@ -85,4 +85,4 @@ OTHER LIABILITY ARISING FROM USE OF THIS SOFTWARE.
 
 ---
 
-*Sara (सार) v1.1.0 · Ashutosh Sinha · ajsinha@gmail.com*
+*Sara (सार) v1.2.0 · Ashutosh Sinha · ajsinha@gmail.com*

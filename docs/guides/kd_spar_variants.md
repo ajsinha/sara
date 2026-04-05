@@ -1,5 +1,5 @@
 # KD-SPAR Variants Guide
-**Sara v1.1.0** · Copyright (C) 2025 Ashutosh Sinha · AGPL-3.0
+**Sara v1.2.0** · Copyright (C) 2025 Ashutosh Sinha · AGPL-3.0
 
 ---
 
@@ -168,4 +168,4 @@ for it in history:
 
 ---
 
-*Sara v1.1.0 · Ashutosh Sinha · ajsinha@gmail.com · AGPL-3.0*
+*Sara v1.2.0 · Ashutosh Sinha · ajsinha@gmail.com · AGPL-3.0*

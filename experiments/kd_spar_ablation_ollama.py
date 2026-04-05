@@ -1,5 +1,5 @@
 # Copyright (C) 2025 Ashutosh Sinha (ajsinha@gmail.com)
-# Sara (सार) — Knowledge Distillation and KD-SPAR Toolkit  v1.1.0
+# Sara (सार) — Knowledge Distillation and KD-SPAR Toolkit  v1.2.0
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # https://github.com/ashutosh-sinha/sara
 """
@@ -628,23 +628,25 @@ def print_report(results: list[AblationResult], config_label: str) -> str:
     return report
 
 
-def save_results(results, config_label, report, seed) -> Path:
+def save_results(results, config_label, report, seed,
+                 teacher_model: str = "", student_model: str = "") -> Path:
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
     jp = RESULTS_DIR / f"ablation_ollama_{config_label}_seed{seed}_{ts}.json"
     tp = RESULTS_DIR / f"ablation_ollama_{config_label}_seed{seed}_{ts}_summary.txt"
 
     conds_data = [
         {
-            "condition":    r.condition,
-            "description":  r.description,
-            "val_metrics":  r.val_metrics,
-            "build_time_s": r.build_time_sec,
-            "final_prompt": r.final_prompt,
+            "condition":      r.condition,
+            "description":    r.description,
+            "val_metrics":    r.val_metrics,
+            "build_time_sec": r.build_time_sec,
+            "final_prompt":   r.final_prompt,
         }
         for r in results
     ]
     with open(jp, "w") as f:
         json.dump({"timestamp": ts, "config": config_label, "seed": seed,
+                   "teacher": teacher_model, "student": student_model,
                    "conditions": conds_data}, f, indent=2)
     with open(tp, "w") as f:
         f.write(report)
@@ -704,7 +706,8 @@ if __name__ == "__main__":
         quick_mode=args.quick,
     )
     report   = print_report(results, label)
-    out_path = save_results(results, label, report, args.seed)
+    out_path = save_results(results, label, report, args.seed,
+                            teacher_model=teacher_m, student_model=student_m)
 
     from sara.core.progress import SaraLogger, _fmt_elapsed
     log = SaraLogger("Sara")

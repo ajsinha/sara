@@ -1,7 +1,9 @@
 {
-  "timestamp": "20260404_031912",
+  "timestamp": "20260404_195904",
   "config": "llama8b\u2192llama3b",
   "seed": 42,
+  "teacher": "llama3.1:8b",
+  "student": "llama3.2:3b",
   "conditions": [
     {
       "condition": "D",
@@ -65,7 +67,7 @@
           }
         ]
       },
-      "build_time_s": 63.0,
+      "build_time_sec": 63.4,
       "final_prompt": "You are a precise knowledge assistant. Answer questions using ONLY the provided context passages. Cite sources inline as [Doc-N] where N is the passage number. If the context does not contain the answer, say: 'I cannot find this in the provided context.' Express uncertainty explicitly when evidence is partial."
     },
     {
@@ -130,7 +132,7 @@
           }
         ]
       },
-      "build_time_s": 94.6,
+      "build_time_sec": 97.6,
       "final_prompt": "You are a precise knowledge assistant. Answer questions using ONLY the provided context passages. Cite sources inline as [Doc-N] where N is the passage number. If the context does not contain the answer, say: 'I cannot find this in the provided context.' Express uncertainty explicitly when evidence is partial.\n\n# Random instructions:\n- Use the active voice in all sentences.\n- Always use bullet points when listing multiple items.\n- Use subheadings to organise responses longer than 100 words.\n- Include a brief disclaimer about response limitations.\n- Avoid passive constructions wherever possible.\n- Keep responses under 120 words whenever possible."
     },
     {
@@ -195,7 +197,7 @@
           }
         ]
       },
-      "build_time_s": 469.3,
+      "build_time_sec": 468.3,
       "final_prompt": "You are a precise knowledge assistant. Answer questions using ONLY the provided context passages. Cite sources inline as [Doc-N] where N is the passage number. If the context does not contain the answer, say: 'I cannot find this in the provided context.' Express uncertainty explicitly when evidence is partial."
     },
     {
@@ -260,7 +262,7 @@
           }
         ]
       },
-      "build_time_s": 1242.7,
+      "build_time_sec": 1513.6,
       "final_prompt": "You are a precise knowledge assistant. Answer questions using ONLY the provided context passages. Cite sources inline as [Doc-N] where N is the passage number. If the context does not contain the answer, say: 'I cannot find this in the provided context.' Express uncertainty explicitly when evidence is partial.\n\n# SPAR refinements:\n- Always cite retrieved passages using [Doc-N] notation after each claim."
     }
   ]

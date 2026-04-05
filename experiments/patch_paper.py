@@ -1,5 +1,5 @@
 # Copyright (C) 2025 Ashutosh Sinha (ajsinha@gmail.com)
-# Sara (सार) — Knowledge Distillation and KD-SPAR Toolkit  v1.1.0
+# Sara (सार) — Knowledge Distillation and KD-SPAR Toolkit  v1.2.0
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # https://github.com/ashutosh-sinha/sara
 """
@@ -16,6 +16,7 @@ Usage
     # Custom output path (e.g. on OryxPro):
     python experiments/patch_paper.py --output ~/Desktop/sara_paper.pdf
 
+Default output: docs/paper/Sara_Knowledge_Distillation.pdf
 All paths are relative to the project root — works on any machine.
 """
 
@@ -27,12 +28,12 @@ from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 RESULTS_DIR  = Path(__file__).parent / "results"
-PAPER_DIR    = PROJECT_ROOT / "paper"
+PAPER_DIR    = PROJECT_ROOT / "docs" / "paper"
 AGG_JSON     = RESULTS_DIR / "aggregated_results.json"
 STORY_SRC    = PAPER_DIR  / "sara_story.py"
 HELPERS_SRC  = PAPER_DIR  / "sara_helpers.py"
 FINAL_SCRIPT = PAPER_DIR  / "_build_final.py"
-DEFAULT_PDF  = PROJECT_ROOT / "sara_paper.pdf"
+DEFAULT_PDF  = PAPER_DIR  / "Sara_Knowledge_Distillation.pdf"
 
 
 def load_aggregated() -> dict:
@@ -135,7 +136,7 @@ story += pgbrk()
 
 def patch_story(agg: dict, output_pdf: Path) -> None:
     if not STORY_SRC.exists():
-        sys.exit(f"ERROR: {STORY_SRC} not found. Is paper/ directory in the project?")
+        sys.exit(f"ERROR: {STORY_SRC} not found. Is docs/paper/ directory in the project?")
 
     original = STORY_SRC.read_text()
     backup   = STORY_SRC.with_suffix(f".bak_{datetime.now().strftime('%Y%m%d_%H%M%S')}")

@@ -4,18 +4,18 @@ OLLAMA KD-SPAR ABLATION RESULTS  [llama8b→llama3b]
 =================================================================
 Rank Cond  KD Score    Δ vs D    Cit Fid   Hedge         Time  Description
 -----------------------------------------------------------------
-  1     A     0.5842       +0.0031    1.000      20.000      1243s  KD-SPAR (self-proposed)
-  2     D     0.5811       +0.0000    0.900      10.000        63s  Baseline (no tuning)
-  3     B     0.5811       +0.0000    0.900      10.000       469s  External-proposed
-  4     C     0.4327       -0.1484    0.900      60.000        95s  Random instructions
+  1     D     0.5811       +0.0000    0.900      10.000        57s  Baseline (no tuning)
+  2     B     0.5811       +0.0000    0.900      10.000       464s  External-proposed
+  3     A     0.5705       -0.0106    1.000      20.000      1551s  KD-SPAR (self-proposed)
+  4     C     0.3356       -0.2455    0.700      0.000        82s  Random instructions
 
 =================================================================
 KEY FINDING:
-  ✓ SELF-KNOWLEDGE HYPOTHESIS SUPPORTED
-  A=0.5842 > B=0.5811 > D=0.5811 > C=0.4327
+  ✗ INCONCLUSIVE — see details below
+  A=0.5705  B=0.5811  D=0.5811  C=0.3356
 
-A−B gap (self-authorship value) = +0.0031
-  → MARGINAL — positive but within noise; re-run with more iterations
+A−B gap (self-authorship value) = -0.0106
+  → NEGATIVE — external matching/beating self-proposed
 
 INTERPRETATION:
   A > B  → self-authorship adds value beyond the KD signal alone

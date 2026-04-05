@@ -1,4 +1,4 @@
-![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL_3.0-blue.svg)  ![Version](https://img.shields.io/badge/version-1.1.0-green.svg)
+![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL_3.0-blue.svg)  ![Version](https://img.shields.io/badge/version-1.2.0-green.svg)
 
 # Sara (सार)
 
@@ -206,5 +206,5 @@ sara/
 
 ---
 
-*Sara (सार) v1.1.0 · Ashutosh Sinha · ajsinha@gmail.com · AGPL-3.0*
+*Sara (सार) v1.2.0 · Ashutosh Sinha · ajsinha@gmail.com · AGPL-3.0*
 
