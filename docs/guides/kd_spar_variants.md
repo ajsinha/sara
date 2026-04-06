@@ -1,5 +1,5 @@
 # KD-SPAR Variants Guide
-**Sara v1.4.0** · Copyright (C) 2025 Ashutosh Sinha · AGPL-3.0
+**Sara v1.6.0** · Copyright (C) 2025 Ashutosh Sinha · AGPL-3.0
 
 ---
 
@@ -16,6 +16,7 @@ They differ in who proposes, what queries are used, and how validation works.
 | Adversarial | Long-tail robustness needed | Dual-objective: hard queries + no standard regression |
 | Federated | Multi-site, private data | No raw data leaves any site |
 | MetaKDSPAR | Compound failures, richer diagnosis | Higher inference cost (K specialist calls) |
+| Enhanced | Base KD-SPAR underperforming | 8 combined improvements, higher cost |
 
 ---
 
@@ -182,6 +183,42 @@ final_prompt, history = meta.run(
 
 ---
 
+## Enhanced KD-SPAR
+
+Combines eight improvements over base KD-SPAR: BERTScore scoring,
+hybrid teacher-diagnosis, contrastive interviews, warm-start from external
+proposals, 5 iterations, soft probabilistic commit gate,
+teacher-guided self-interview, and Tree of Thought proposal generation.
+
+```python
+from sara.rag.kd_spar_enhanced import EnhancedKDSPAR, EnhancedConfig
+
+cfg = EnhancedConfig(
+    use_bert_score=True,        # semantic scoring
+    use_hybrid_proposer=True,   # teacher diagnoses, student proposes
+    use_contrastive=True,       # good/bad pair reasoning
+    warm_start_from_b=True,     # bootstrap from external proposals
+    iterations=5,               # more convergence time
+    soft_gate=True,             # probabilistic acceptance
+    teacher_guided=True,        # show actual teacher text
+    use_tree_of_thought=True,   # branch→evaluate→expand
+)
+
+enhanced = EnhancedKDSPAR(
+    teacher_model="llama3.1:8b",
+    student_model="llama3.2:3b",
+    vector_store=store, config=cfg,
+)
+
+final_prompt, history = enhanced.run(
+    train_queries=train_q,
+    val_queries=val_q,
+    teacher_responses=teacher_responses,
+)
+```
+
+---
+
 ## Interpreting results
 
 ```python
@@ -197,4 +234,4 @@ for it in history:
 
 ---
 
-*Sara v1.4.0 · Ashutosh Sinha · ajsinha@gmail.com · AGPL-3.0*
+*Sara v1.6.0 · Ashutosh Sinha · ajsinha@gmail.com · AGPL-3.0*

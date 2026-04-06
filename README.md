@@ -1,4 +1,4 @@
-![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL_3.0-blue.svg)  ![Version](https://img.shields.io/badge/version-1.4.0-green.svg)
+![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL_3.0-blue.svg)  ![Version](https://img.shields.io/badge/version-1.6.0-green.svg)
 
 # Sara (सार)
 
@@ -36,6 +36,7 @@ of insights (instruction strings) across sites, never the raw data.
 | `sara.rag.kd_spar_adversarial` | Adversarial variant |
 | `sara.rag.kd_spar_federated` | Federated variant (privacy-preserving) |
 | `sara.rag.kd_spar_meta` | **MetaKDSPAR** — metaprompting-enhanced diagnosis |
+| `sara.rag.kd_spar_enhanced` | **Enhanced KD-SPAR** — 7 algorithmic improvements |
 
 ---
 
@@ -198,7 +199,7 @@ sara/
 │   └── api/           API reference
 ├── experiments/       Ablation scripts + results
 ├── tests/             246 tests, all offline
-├── examples/          9 runnable end-to-end examples
+├── examples/          10 runnable end-to-end examples
 ├── configs/           YAML configs (backend.yaml, kd_spar.yaml, ...)
 ├── setup_and_run.sh   Complete local experimentation script
 ├── example_run.sh     Quick-reference command examples
@@ -207,5 +208,5 @@ sara/
 
 ---
 
-*Sara (सार) v1.4.0 · Ashutosh Sinha · ajsinha@gmail.com · AGPL-3.0*
+*Sara (सार) v1.6.0 · Ashutosh Sinha · ajsinha@gmail.com · AGPL-3.0*
 

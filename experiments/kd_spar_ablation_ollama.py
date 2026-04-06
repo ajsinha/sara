@@ -1,5 +1,5 @@
 # Copyright (C) 2025 Ashutosh Sinha (ajsinha@gmail.com)
-# Sara (सार) — Knowledge Distillation and KD-SPAR Toolkit  v1.4.0
+# Sara (सार) — Knowledge Distillation and KD-SPAR Toolkit  v1.6.0
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # https://github.com/ashutosh-sinha/sara
 """
@@ -442,6 +442,39 @@ def build_E(
     return final_prompt
 
 
+def build_F(
+    teacher_model: str,
+    student_model: str,
+    train_queries: list[str],
+    val_queries: list[str],
+    teacher_responses: dict[str, str],
+    store: RAGVectorStore,
+    iterations: int = 3,
+) -> str:
+    """Condition F: Enhanced KD-SPAR — all 8 improvements."""
+    from sara.rag.kd_spar_enhanced import EnhancedKDSPAR, EnhancedConfig
+    cfg = EnhancedConfig(
+        use_bert_score=True,
+        use_hybrid_proposer=True,
+        use_contrastive=True,
+        warm_start_from_b=True,
+        iterations=max(iterations, 5),
+        soft_gate=True,
+        teacher_guided=True,
+        threshold=0.002,
+    )
+    enhanced = EnhancedKDSPAR(
+        teacher_model=teacher_model, student_model=student_model,
+        vector_store=store, config=cfg,
+        base_url=OLLAMA_BASE_URL, temperature=0.3,
+    )
+    final_prompt, _ = enhanced.run(
+        train_queries=train_queries, val_queries=val_queries,
+        teacher_responses=teacher_responses,
+    )
+    return final_prompt
+
+
 # ── Main ablation ──────────────────────────────────────────────────────────
 
 @dataclass
@@ -555,7 +588,7 @@ def run_ablation(
         log.tick(i)
     log.done(f"{len(t_resps)}/{len(all_q)} teacher responses collected")
 
-    # ── Run five conditions ──────────────────────────────────────────────────
+    # ── Run six conditions ──────────────────────────────────────────────────
     results: list[AblationResult] = []
     cond_defs = [
         ("D", "Baseline (no tuning)",    build_D,
@@ -567,6 +600,8 @@ def run_ablation(
         ("A", "KD-SPAR (self-proposed)", build_A,
          (teacher_model, student_model, train_q, val_q, t_resps, store, iterations)),
         ("E", "MetaKDSPAR (meta-prompted)", build_E,
+         (teacher_model, student_model, train_q, val_q, t_resps, store, iterations)),
+        ("F", "Enhanced KD-SPAR (all improvements)", build_F,
          (teacher_model, student_model, train_q, val_q, t_resps, store, iterations)),
     ]
 
@@ -648,6 +683,19 @@ def print_report(results: list[AblationResult], config_label: str) -> str:
         else:
             lines.append("  → Meta-prompting overhead not justified for this config")
 
+    f_r = next((r for r in results if r.condition == "F"), None)
+    if f_r:
+        f_kd = f_r.val_metrics["mean_kd_score"]
+        fa_gap = f_kd - a_kd
+        fb_gap = f_kd - b_kd
+        lines.append(f"\nEnhanced (F) = {f_kd:.4f}   F−A gap = {fa_gap:+.4f}   F−B gap = {fb_gap:+.4f}")
+        if fb_gap > 0.005:
+            lines.append("  → Enhanced KD-SPAR outperforms external proposal")
+        elif fa_gap > 0.005:
+            lines.append("  → Enhancements improve over base but not external")
+        else:
+            lines.append("  → Enhancements did not improve in this config")
+
     lines.append(f"\nA−B gap (self-authorship value) = {gap:+.4f}")
     if   gap > 0.02: lines.append("  → STRONG evidence for self-knowledge claim")
     elif gap > 0.01: lines.append("  → MODERATE — supports claim; more iterations would strengthen it")
@@ -658,6 +706,8 @@ def print_report(results: list[AblationResult], config_label: str) -> str:
     lines.append(f"\nINTERPRETATION:")
     lines.append("  A > B  → self-authorship adds value beyond the KD signal alone")
     lines.append("  E > A  → meta-prompting improves over flat self-diagnosis")
+    lines.append("  F > A  → enhancements improve over base KD-SPAR")
+    lines.append("  F > B  → enhanced self-authorship beats external proposal")
     lines.append("  B > C  → KD-signal-guided proposals beat random augmentation")
     lines.append("  B > D  → any KD-guided proposal beats no tuning")
     lines.append("  C ≈ D  → random instructions provide no real signal (expected)")

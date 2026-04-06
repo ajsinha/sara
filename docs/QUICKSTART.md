@@ -1,5 +1,5 @@
 # Sara (सार) — Quickstart Guide
-**Version 1.4.0** · Copyright (C) 2025 Ashutosh Sinha (ajsinha@gmail.com) · AGPL-3.0
+**Version 1.6.0** · Copyright (C) 2025 Ashutosh Sinha (ajsinha@gmail.com) · AGPL-3.0
 
 ---
 
@@ -151,7 +151,7 @@ sara/
 │   ├── paper/             PDF paper builder (sara_helpers.py + sara_story.py)
 │   ├── guides/            Extended guides
 │   └── api/               API reference
-├── examples/              9 runnable end-to-end examples
+├── examples/              10 runnable end-to-end examples
 ├── experiments/           Ablation scripts + setup guide
 ├── tests/                 246 tests, all offline
 ├── configs/               backend.yaml + hyperparameter configs
@@ -173,4 +173,4 @@ After running experiments, the number that matters is the **A−B gap**:
 
 ---
 
-*Sara (सार) v1.4.0 · Ashutosh Sinha · ajsinha@gmail.com · AGPL-3.0*
+*Sara (सार) v1.6.0 · Ashutosh Sinha · ajsinha@gmail.com · AGPL-3.0*

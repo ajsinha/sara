@@ -1,5 +1,5 @@
 # Copyright (C) 2025 Ashutosh Sinha (ajsinha@gmail.com)
-# Sara (सार) — Knowledge Distillation and KD-SPAR Toolkit  v1.4.0
+# Sara (सार) — Knowledge Distillation and KD-SPAR Toolkit  v1.6.0
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # https://github.com/ashutosh-sinha/sara
 from __future__ import annotations
@@ -258,6 +258,49 @@ def kd_score(student: str, teacher: str) -> float:
     s_cited = bool(CITATION_RE.search(student))
     cit     = 1.0 if (not t_cited) or s_cited else 0.0
     return round(0.3 * cit + 0.7 * jaccard(student, teacher), 4)
+
+
+# ── BERTScore-based scoring (Enhancement 2) ──────────────────────────────
+
+_BERT_MODEL = None
+
+def _get_bert_model():
+    """Lazy-load sentence-transformers model for BERTScore."""
+    global _BERT_MODEL
+    if _BERT_MODEL is None:
+        try:
+            from sentence_transformers import SentenceTransformer
+            _BERT_MODEL = SentenceTransformer("all-MiniLM-L6-v2")
+        except ImportError:
+            return None
+    return _BERT_MODEL
+
+
+def bert_similarity(a: str, b: str) -> float:
+    """Cosine similarity using sentence-transformers embeddings."""
+    model = _get_bert_model()
+    if model is None:
+        return jaccard(a, b)  # fallback
+    import numpy as np
+    embs = model.encode([a, b], normalize_embeddings=True)
+    return float(np.dot(embs[0], embs[1]))
+
+
+def kd_score_v2(student: str, teacher: str, use_bert: bool = True) -> float:
+    """Enhanced KD score: 0.3·citation + 0.5·semantic + 0.2·jaccard.
+
+    Falls back to kd_score() if sentence-transformers is not available.
+    """
+    t_cited = bool(CITATION_RE.search(teacher))
+    s_cited = bool(CITATION_RE.search(student))
+    cit     = 1.0 if (not t_cited) or s_cited else 0.0
+
+    if use_bert and _get_bert_model() is not None:
+        sem = bert_similarity(student, teacher)
+        jac = jaccard(student, teacher)
+        return round(0.3 * cit + 0.5 * sem + 0.2 * jac, 4)
+    else:
+        return kd_score(student, teacher)
 
 
 def batch_kd_score(queries: list, teacher_responses: dict, pipeline) -> float:

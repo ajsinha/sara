@@ -1,5 +1,5 @@
 {
-  "timestamp": "20260406_070137",
+  "timestamp": "20260406_110800",
   "config": "qwen7b\u2192llama3b",
   "seed": 123,
   "teacher": "qwen2.5:7b",
@@ -66,6 +66,20 @@
       "description": "MetaKDSPAR (meta-prompted)",
       "val_metrics": {
         "label": "E_MetaKDSP",
+        "n_queries": 0,
+        "mean_kd_score": 0.0,
+        "citation_fidelity": 0.0,
+        "hedge_match": 0.0,
+        "per_query": []
+      },
+      "build_time_sec": 0.0,
+      "final_prompt": "You are a precise knowledge assistant. Answer questions using ONLY the provided context passages. Cite sources inline as [Doc-N] where N is the passage number. If the context does not contain the answer, say: 'I cannot find this in the provided context.' Express uncertainty explicitly when evidence is partial."
+    },
+    {
+      "condition": "F",
+      "description": "Enhanced KD-SPAR (all improvements)",
+      "val_metrics": {
+        "label": "F_Enhanced",
         "n_queries": 0,
         "mean_kd_score": 0.0,
         "citation_fidelity": 0.0,

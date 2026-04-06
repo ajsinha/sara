@@ -9,6 +9,7 @@ Rank Cond  KD Score    Δ vs D    Cit Fid   Hedge         Time  Description
   3     B     0.0000       +0.0000    0.000      0.000         0s  External-proposed
   4     A     0.0000       +0.0000    0.000      0.000         0s  KD-SPAR (self-proposed)
   5     E     0.0000       +0.0000    0.000      0.000         0s  MetaKDSPAR (meta-prompted)
+  6     F     0.0000       +0.0000    0.000      0.000         0s  Enhanced KD-SPAR (all improvem
 
 =================================================================
 KEY FINDING:
@@ -18,12 +19,17 @@ KEY FINDING:
 MetaKDSPAR (E) = 0.0000   E−A gap = +0.0000
   → Meta-prompting comparable to base KD-SPAR
 
+Enhanced (F) = 0.0000   F−A gap = +0.0000   F−B gap = +0.0000
+  → Enhancements did not improve in this config
+
 A−B gap (self-authorship value) = +0.0000
   → NEGATIVE — external matching/beating self-proposed
 
 INTERPRETATION:
   A > B  → self-authorship adds value beyond the KD signal alone
   E > A  → meta-prompting improves over flat self-diagnosis
+  F > A  → enhancements improve over base KD-SPAR
+  F > B  → enhanced self-authorship beats external proposal
   B > C  → KD-signal-guided proposals beat random augmentation
   B > D  → any KD-guided proposal beats no tuning
   C ≈ D  → random instructions provide no real signal (expected)

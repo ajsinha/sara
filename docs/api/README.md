@@ -1,5 +1,5 @@
 # Sara API Reference
-**Sara v1.4.0** · Copyright (C) 2025 Ashutosh Sinha · AGPL-3.0
+**Sara v1.6.0** · Copyright (C) 2025 Ashutosh Sinha · AGPL-3.0
 
 ---
 
@@ -34,6 +34,7 @@ sara/
     ├── kd_spar_adversarial.py    AdversarialKDSPAR, AdversarialQuery
     ├── kd_spar_federated.py      FederatedKDSPARServer/Client, FederatedSimulation
     ├── kd_spar_meta.py           MetaKDSPAR, Specialist, SPECIALISTS
+    ├── kd_spar_enhanced.py       EnhancedKDSPAR, EnhancedConfig
     ├── evaluation.py     EquivalenceReport, run_equivalence_suite
     ├── migration.py      RAGMigration, RAGTrace
     └── prompt_opt.py     GridSearch, EvolutionaryAPO
@@ -127,4 +128,4 @@ print(resp.citations)   # ["[Doc-1]", "[Doc-2]"]
 
 ---
 
-*Sara v1.4.0 · Ashutosh Sinha · ajsinha@gmail.com · AGPL-3.0*
+*Sara v1.6.0 · Ashutosh Sinha · ajsinha@gmail.com · AGPL-3.0*

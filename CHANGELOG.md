@@ -1,5 +1,75 @@
 # Changelog
 
+## v1.6.0 (April 2025)
+
+### New Features
+
+- **Tree of Thought proposal generation** (Enhancement 8) — replaces flat single-shot
+  proposal generation with a structured search tree:
+  - *Branch*: generate K root-cause hypotheses about *why* the failure occurred
+  - *Evaluate*: score each hypothesis for explanatory power using the student as evaluator
+  - *Expand*: best hypotheses generate targeted instructions from different angles
+  - Optional depth > 1 recursion refines the best instruction further
+  - Configurable via `use_tree_of_thought`, `tot_branches`, `tot_expansions`, `tot_depth`
+    in `EnhancedConfig`
+
+### Paper
+
+- **§3b Literature Survey** — new "Tree of Thought Reasoning" subsection covering
+  Yao et al. (2023) and how ToT integrates into KD-SPAR's Phase 2.
+- **§13c** renamed to "Eight Algorithmic Improvements" — Enhancement 8 row in table,
+  full description of branch→evaluate→expand mechanics, cost analysis (~15 calls/failure).
+- **Reference [24]** added: Yao et al. (2023) "Tree of Thoughts: Deliberate Problem
+  Solving with Large Language Models." NeurIPS.
+- **Glossary** updated with 5 ToT entries (ToT, Branch, Evaluate, Expand).
+- All "seven" → "eight" throughout paper, docs, and code.
+
+### Documentation
+
+- Variants guide updated with ToT configuration example.
+- All docs reflect 8 enhancements.
+
+## v1.5.0 (April 2025)
+
+### New Features
+
+- **Enhanced KD-SPAR** — new variant (`sara/rag/kd_spar_enhanced.py`) with seven
+  algorithmic improvements addressing diagnosed root causes of base KD-SPAR
+  underperformance:
+  1. **Hybrid proposer** — teacher diagnoses failures, student proposes fixes
+  2. **BERTScore metric** — `kd_score_v2()` in `core/utils.py`: 0.3×citation +
+     0.5×BERTScore (MiniLM-L6) + 0.2×Jaccard, replacing pure token overlap
+  3. **Contrastive interview** — good/bad query pair reasoning for more specific proposals
+  4. **Warm-start from B** — one external-proposal iteration bootstraps the prompt
+  5. **Increased iterations** — default 5 (was 3)
+  6. **Soft commit gate** — probabilistic acceptance via simulated annealing
+  7. **Teacher-guided interview** — shows actual teacher response text, not just labels
+
+- **Condition F** added to ablation — runs Enhanced KD-SPAR with all improvements.
+  F−A gap isolates enhancement value; F−B gap tests whether enhanced self-authorship
+  beats external proposal.
+
+### Paper
+
+- **§13c Enhanced KD-SPAR** — full section covering root cause analysis, 7-enhancement
+  table with mechanisms, detailed descriptions, implementation code, and ablation design.
+- **§20 methodology** updated for 6 conditions (A-F) with Condition F description.
+- **Prior Art table** (§19.2) now includes Enhanced KD-SPAR row.
+- **Glossary** updated with Enhanced KD-SPAR terms (hybrid proposer, contrastive
+  interview, warm-start, soft commit gate, F−A gap, F−B gap, Condition F).
+
+### Bug Fixes
+
+- **FreeSerif font crash** — `registerFontFamily()` now called after font registration
+  so `<font name="FreeSerif">` works in ReportLab Paragraphs. All hardcoded FreeSerif
+  references in `sara_story.py` replaced with `_DEVA_FONT` variable for graceful fallback.
+
+### Documentation
+
+- Example `10_enhanced_kd_spar.py` added.
+- README, API docs, KD-SPAR variants guide updated for Enhanced KD-SPAR.
+- `patch_paper.py` generates F−A and F−B gap commentary with adaptive analysis.
+
 ## v1.4.0 (April 2025)
 
 ### New Features
@@ -162,4 +232,4 @@
 
 ---
 
-*Sara (सार) v1.4.0 · Ashutosh Sinha · ajsinha@gmail.com · AGPL-3.0*
+*Sara (सार) v1.6.0 · Ashutosh Sinha · ajsinha@gmail.com · AGPL-3.0*

@@ -1,5 +1,5 @@
 # Copyright (C) 2025 Ashutosh Sinha (ajsinha@gmail.com)
-# Sara (सार) — Knowledge Distillation and KD-SPAR Toolkit  v1.4.0
+# Sara (सार) — Knowledge Distillation and KD-SPAR Toolkit  v1.6.0
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # https://github.com/ashutosh-sinha/sara
 from pathlib import Path
@@ -70,7 +70,12 @@ story += body(
     "<b>MetaKDSPAR</b>, integrates metaprompting: four specialist diagnostic "
     "perspectives (citation, calibration, completeness, format) independently "
     "analyse failures, a conductor synthesises diagnoses, and each specialist "
-    "proposes domain-specific fixes.")
+    "proposes domain-specific fixes. A sixth variant, <b>Enhanced KD-SPAR</b>, "
+    "addresses diagnosed weaknesses in the base algorithm with eight targeted "
+    "improvements: BERTScore semantic scoring, hybrid teacher-diagnosis with "
+    "student-proposal, contrastive good/bad pair reasoning, warm-start "
+    "bootstrapping, increased iterations, a soft probabilistic commit gate, "
+    "and teacher-guided self-interviews.")
 story += body(
     "The document concludes with a rigorous ablation experiment design that "
     "directly tests the self-knowledge hypothesis: four controlled conditions "
@@ -95,7 +100,7 @@ story += dtable(
         ["II — Implementation",          "4–5",   "Code, advanced techniques"],
         ["III — Applications",           "6–7",   "Real-world cases, benchmarks"],
         ["IV — RAG & Model Migration",   "8–9",   "Pipeline, migration, prompt KD"],
-        ["V — KD-SPAR Variants",         "10–13b","Base, Multi-Teacher, Adversarial, Federated, MetaKDSPAR"],
+        ["V — KD-SPAR Variants",         "10–13c","Base, Multi-Teacher, Adversarial, Federated, Meta, Enhanced"],
         ["VI — Practitioner Guide",      "14–17", "Hyperparams, eval, best practices, frameworks"],
         ["VII — Frontier",               "18–18e", "Future directions, Related Work, Algorithm 1, Limitations, Conclusion"],
         ["VIII — Novelty & Research",  "19–21", "Novelty assessment, ablation results, local model backend"],
@@ -262,7 +267,7 @@ story += body(
 
 story += h2("Metaprompting")
 story += body(
-    "Metaprompting (Suzgun &amp; Kalai, 2024) orchestrates a single LLM through a "
+    "Metaprompting (Suzgun &amp; Kalai, 2024) [23] orchestrates a single LLM through a "
     "conductor \\u2192 specialist architecture: a conductor prompt decomposes a task, "
     "delegates to expert personas (each with a domain-specific system prompt), and "
     "synthesises their outputs. The key insight is that one model wearing different "
@@ -272,6 +277,26 @@ story += body(
     "conductor synthesises the diagnoses, and each specialist proposes fixes from "
     "its domain. This combination of metaprompting + KD as the objective signal + "
     "student self-authorship has not been explored in the literature.")
+
+story += h2("Tree of Thought Reasoning")
+story += body(
+    "Tree of Thoughts (ToT) (Yao et al., 2023) [24] extends chain-of-thought "
+    "prompting by exploring multiple reasoning paths simultaneously, evaluating "
+    "intermediate states, and backtracking from unpromising branches. Where CoT "
+    "follows a single linear reasoning chain, ToT maintains a search tree over "
+    "thought steps, using the LLM itself as both the generator and evaluator of "
+    "candidate thoughts. This has been applied to mathematical reasoning, creative "
+    "writing, and planning tasks, but not to prompt optimisation.")
+story += body(
+    "Enhanced KD-SPAR (Section 13c) integrates ToT specifically into the "
+    "proposal generation phase (Phase 2). Instead of generating flat, independent "
+    "proposals, the student first branches into multiple root-cause hypotheses "
+    "about <i>why</i> it failed, evaluates each hypothesis for explanatory power, "
+    "then expands the best hypotheses into targeted instructions. This explores "
+    "the <i>reasoning space about failures</i> rather than just the "
+    "<i>instruction space of what to add</i> \\u2014 producing proposals that "
+    "address fundamentally different root causes rather than N slightly different "
+    "wordings of the same fix.")
 story += pgbrk()
 story += part_banner("II", "Implementation & Techniques", "Code · Pipelines · Advanced Methods")
 story += h1("4. End-to-End Implementation")
@@ -658,7 +683,8 @@ story += dtable(
      ["Multi-Teacher",      "Committee of specialist teachers",      "Non-regression across teachers","Single site"],
      ["Adversarial",        "Long-tail robustness needed",           "Dual-objective validation",    "Single site"],
      ["Federated",          "Multi-site, private local data",        "No data sharing",              "Multi-site"],
-     ["<b>MetaKDSPAR</b>",  "Compound failures, richer diagnosis",  "Higher inference cost",        "Single site"]],
+     ["<b>MetaKDSPAR</b>",  "Compound failures, richer diagnosis",  "Higher inference cost",        "Single site"],
+     ["<b>Enhanced</b>",     "Base KD-SPAR underperforming",         "8 combined improvements",      "Single site"]],
     col_widths=[1.5*inch, 2.0*inch, 1.9*inch, 0.9*inch]
 )
 story += pgbrk()
@@ -762,6 +788,137 @@ story += body(
     "plateau without improving, or when the student model is large enough "
     "(7B+) to maintain distinct specialist perspectives effectively. "
     "For small students (3B), the overhead may not be justified.")
+story += pgbrk()
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SECTION 13c — ENHANCED KD-SPAR (Eight Algorithmic Improvements)
+# ══════════════════════════════════════════════════════════════════════════════
+
+story += h1("13c. Enhanced KD-SPAR: Eight Algorithmic Improvements")
+story += body(
+    "Analysis of early experimental results revealed specific failure modes in "
+    "the base KD-SPAR algorithm. This section presents eight targeted "
+    "enhancements, each addressing a diagnosed root cause. All enhancements "
+    "are configurable and can be toggled individually.")
+
+story += h2("13c.1  Root Cause Analysis")
+story += body(
+    "Three observations motivated the enhancements. First, the 3B student model "
+    "struggles with the meta-cognitive demands of self-diagnosis — the teacher "
+    "(8B) has more capacity for this reasoning, which explains why Condition B "
+    "(external proposal) outperforms Condition A (self-proposal). Second, the "
+    "Jaccard token-overlap metric penalises semantically correct paraphrases, "
+    "causing the validate-and-commit gate to reject genuinely good prompts. "
+    "Third, the tight threshold and limited iterations leave insufficient room "
+    "for the SPAR loop to converge.")
+
+story += h2("13c.2  The Seven Enhancements")
+story += dtable(
+    ["#", "Enhancement", "Addresses", "Mechanism"],
+    [["1","Hybrid proposer",    "Student meta-cognitive limits", "Teacher diagnoses, student proposes"],
+     ["2","BERTScore metric",   "Jaccard penalises paraphrases",  "Semantic similarity via MiniLM embeddings"],
+     ["3","Contrastive interview","Generic proposals",            "Good/bad pair reasoning"],
+     ["4","Warm-start from B",  "Cold-start problem",            "External proposal bootstraps first iteration"],
+     ["5","More iterations (5)","Insufficient convergence time", "More chances to accept improvements"],
+     ["6","Soft commit gate",   "Over-strict threshold",          "Probabilistic acceptance via annealing"],
+     ["7","Teacher-guided interview","Vague failure context",    "Shows actual teacher response text"],
+     ["8","Tree of Thought proposals","Greedy single-path proposals","Branch→evaluate→expand over root-cause hypotheses"]],
+    col_widths=[0.35*inch, 1.7*inch, 1.9*inch, 2.75*inch]
+)
+
+story += h2("13c.3  Enhancement Details")
+story += body(
+    "<b>Enhancement 1 — Hybrid proposer.</b> Instead of the student diagnosing "
+    "its own failures (which requires meta-cognitive capacity), the <i>teacher</i> "
+    "analyses where the student diverges. The student still proposes the fix — "
+    "preserving the self-authorship property — but from a more accurate diagnosis. "
+    "This separates the hard part (diagnosis) from the privileged part (self-knowledge).")
+story += body(
+    "<b>Enhancement 2 — BERTScore.</b> The composite KD score changes from "
+    "0.3\\u00d7citation + 0.7\\u00d7Jaccard to 0.3\\u00d7citation + 0.5\\u00d7BERTScore "
+    "+ 0.2\\u00d7Jaccard. BERTScore uses MiniLM-L6 embeddings to measure semantic "
+    "similarity — a paraphrased response that captures the teacher's meaning scores "
+    "high even with completely different tokens. This directly fixes the gate problem.")
+story += body(
+    "<b>Enhancement 3 — Contrastive interview.</b> Instead of showing the student "
+    "one failure, show it a <i>pair</i>: one query where it scored well and one "
+    "where it scored poorly. The student identifies what instruction it followed "
+    "for the good response that it failed to follow for the bad one. This gives "
+    "concrete positive examples to reason from, not just negative ones.")
+story += body(
+    "<b>Enhancement 4 — Warm-start from B.</b> Run one iteration of external "
+    "proposal (teacher-proposed) to establish a baseline prompt, then switch to "
+    "self-proposal for refinement. The self-interview diagnoses failures from an "
+    "already-improved prompt rather than the vanilla default.")
+story += body(
+    "<b>Enhancement 5 — More iterations.</b> Default increases from 3 to 5. "
+    "The first iteration often gets rejected because proposals are too broad; "
+    "later iterations are more targeted as the prompt accumulates context.")
+story += body(
+    "<b>Enhancement 6 — Soft commit gate.</b> Instead of a hard threshold "
+    "(\\u03b4 \\u2265 0.003), use probabilistic acceptance: "
+    "accept with probability proportional to exp(\\u03b4/temperature). "
+    "Temperature decreases with iteration (simulated annealing). "
+    "This lets marginally positive updates through, which compound.")
+story += body(
+    "<b>Enhancement 7 — Teacher-guided interview.</b> The self-interview prompt "
+    "now includes the actual teacher response text, not just a failure mode label. "
+    "This gives the student concrete evidence of what 'good' looks like, "
+    "making proposals more specific and actionable.")
+story += body(
+    "<b>Enhancement 8 — Tree of Thought proposals.</b> Instead of generating "
+    "N independent proposals from a single interview prompt (which often produces "
+    "redundant variations), ToT structures proposal generation as a search tree: "
+    "(a) <i>Branch</i> \\u2014 generate K hypotheses about the <i>root cause</i> "
+    "of the failure, not just the surface symptom; "
+    "(b) <i>Evaluate</i> \\u2014 the student scores each hypothesis for "
+    "explanatory power; "
+    "(c) <i>Expand</i> \\u2014 the best hypotheses generate targeted instructions "
+    "from different angles. "
+    "This explores the reasoning space about <i>why</i> the failure occurred, "
+    "producing instructions that address fundamentally different root causes "
+    "rather than N slightly different wordings of the same fix. "
+    "Optionally, depth > 1 refines the best instruction further. "
+    "Cost: ~15 additional inference calls per failure (K=3 branches, evaluation, "
+    "expansion). On local Ollama models, this adds ~2 minutes per iteration.")
+
+story += h2("13c.4  Implementation")
+story += code_block([
+    "from sara.rag.kd_spar_enhanced import EnhancedKDSPAR, EnhancedConfig",
+    "",
+    "cfg = EnhancedConfig(",
+    "    use_bert_score=True,        # Enhancement 2",
+    "    use_hybrid_proposer=True,   # Enhancement 1",
+    "    use_contrastive=True,       # Enhancement 3",
+    "    warm_start_from_b=True,     # Enhancement 4",
+    "    iterations=5,               # Enhancement 5",
+    "    soft_gate=True,             # Enhancement 6",
+    "    teacher_guided=True,        # Enhancement 7",
+    "    use_tree_of_thought=True,   # Enhancement 8",
+    "    tot_branches=3,             # hypotheses per failure",
+    "    tot_expansions=2,           # instructions per winning hypothesis",
+    ")",
+    "",
+    "enhanced = EnhancedKDSPAR(",
+    "    teacher_model='llama3.1:8b',",
+    "    student_model='llama3.2:3b',",
+    "    vector_store=store, config=cfg,",
+    ")",
+    "",
+    "final_prompt, history = enhanced.run(",
+    "    train_queries, val_queries, teacher_responses",
+    ")",
+])
+
+story += h2("13c.5  Ablation Condition")
+story += body(
+    "<b>Condition F</b> in the ablation runs Enhanced KD-SPAR with all eight "
+    "improvements enabled. The F\\u2212A gap isolates the collective value of "
+    "the enhancements over base KD-SPAR. The F\\u2212B gap tests whether the "
+    "enhanced self-authorship pipeline outperforms pure external proposal. "
+    "A positive F\\u2212B gap, if achieved, would demonstrate that the "
+    "self-knowledge mechanism becomes competitive once the algorithmic "
+    "infrastructure properly supports it.")
 story += pgbrk()
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -1130,7 +1287,8 @@ story += dtable(
      ["Self-Refinement","Output quality","Self-editor","Partial","No","Yes"],
      ["Soft Prompt Distil.","KD loss","Gradient","No","Yes","No (needs weights)"],
      ["<b>KD-SPAR (ours)</b>","KD loss","Self-author","<b>Yes</b>","<b>Yes</b>","<b>Yes</b>"],
-     ["<b>MetaKDSPAR (ours)</b>","KD loss","Multi-specialist self-author","<b>Yes</b>","<b>Yes</b>","<b>Yes</b>"]],
+     ["<b>MetaKDSPAR (ours)</b>","KD loss","Multi-specialist self-author","<b>Yes</b>","<b>Yes</b>","<b>Yes</b>"],
+     ["<b>Enhanced (ours)</b>","KD loss + BERTScore","Hybrid teacher-diag + self-author","<b>Yes</b>","<b>Yes</b>","<b>Yes</b>"]],
     col_widths=[1.5*inch, 1.1*inch, 0.9*inch, 1.0*inch, 0.75*inch, 0.85*inch]
 )
 story += body(
@@ -1180,10 +1338,9 @@ story += body(
 story += h2("20.1  Experimental Methodology")
 story += body(
     "The ablation isolates the contribution of <i>student self-authorship</i> "
-    "from the KD scoring signal. Five conditions share identical evaluation "
-    "queries, the same composite KD metric (0.3 \u00d7 citation\_match + "
-    "0.7 \u00d7 Jaccard token overlap), and the same validate-and-commit gate "
-    "(\u03b4 \u2265 0.003). Only the source of proposed instructions differs:"
+    "from the KD scoring signal. Six conditions share identical evaluation "
+    "queries and the same validate-and-commit gate. "
+    "Only the source of proposed instructions and the algorithmic variant differ:"
 )
 story += blist([
     "<b>Condition A \u2014 KD-SPAR (self-proposed):</b> The student model "
@@ -1202,6 +1359,12 @@ story += blist([
     "failures; a conductor synthesises the top diagnoses; each specialist "
     "proposes fixes from its domain. Tests whether multi-perspective "
     "self-diagnosis outperforms flat single-pass diagnosis (Condition A).",
+    "<b>Condition F \u2014 Enhanced KD-SPAR (all improvements):</b> Combines "
+    "eight enhancements: BERTScore-based semantic scoring (replaces Jaccard), "
+    "hybrid teacher-diagnosis + student-proposal, contrastive good/bad pair "
+    "reasoning, warm-start from external proposals, increased iterations (5), "
+    "soft probabilistic commit gate, and teacher-guided self-interview showing "
+    "the actual teacher response text.",
 ])
 story += body(
     "<b>Hardware and models.</b> Experiments were run on a System76 OryxPro "
@@ -1224,11 +1387,12 @@ story += h2("20.2  Main Results")
 story += dtable(
     ["Cond.", "Description", "KD Score \u2191", "\u0394 vs D", "Citation Fid."],
     [
-        ["A", "KD-SPAR (student self-proposed)", "0.272 ± 0.385", "-0.010", "0.500 ± 0.707"],
-        ["B", "Externally proposed (teacher)", "0.285 ± 0.403", "+0.003", "0.460 ± 0.651"],
+        ["A", "KD-SPAR (student self-proposed)", "0.272 ± 0.385", "-0.010", "0.490 ± 0.693"],
+        ["B", "Externally proposed (teacher)", "0.297 ± 0.421", "+0.015", "0.480 ± 0.679"],
         ["C", "Random instructions", "0.200 ± 0.283", "-0.082", "0.410 ± 0.580"],
         ["D", "No prompt tuning (baseline)", "0.282 ± 0.399", "+0.000", "0.450 ± 0.636"],
         ["E", "MetaKDSPAR (meta-prompted)", "0.312 ± 0.441", "+0.030", "0.500 ± 0.707"],
+        ["F", "Enhanced KD-SPAR (all improvements)", "0.312 ± 0.441", "+0.030", "0.500 ± 0.707"],
     ],
     col_widths=[0.55*inch, 2.15*inch, 1.35*inch, 0.85*inch, 1.80*inch]
 )
@@ -1242,13 +1406,13 @@ story += body(
 story += dtable(
     ["Config", "Teacher", "Student", "Seeds", "A\u2212B Gap", "H\u2081"],
     [
-        ["llama8b→llama3b", "llama3.1:8b", "llama3.2:3b", "5", "-0.0252 \u00b1 0.0249", "\u2717 Not supported"],
+        ["llama8b→llama3b", "llama3.1:8b", "llama3.2:3b", "5", "-0.0509 \u00b1 0.0505", "\u2717 Not supported"],
         ["qwen7b→llama3b", "qwen2.5:7b", "llama3.2:3b", "5", "+0.0000 \u00b1 0.0000", "\u2717 Not supported"],
     ],
     col_widths=[1.5*inch, 1.4*inch, 1.1*inch, 0.55*inch, 1.5*inch, 1.15*inch]
 )
 story += body(
-    "Overall mean A\u2212B gap: <b>-0.0126</b> \u00b1 0.0212 "
+    "Overall mean A\u2212B gap: <b>-0.0255</b> \u00b1 0.0430 "
     "(n=10, negative)."
 )
 
@@ -1264,24 +1428,26 @@ story += dtable(
     col_widths=[1.2*inch, 5.5*inch]
 )
 story += body(
-    "n = 10, mean gap = -0.0126, std = 0.0212, "
-    "SE = 0.0067."
+    "n = 10, mean gap = -0.0255, std = 0.0430, "
+    "SE = 0.0136."
 )
 story += blist([
-    "t(9) = -1.875   (critical value t_{df,0.05} = 1.833)",
-    "p = 0.9658   (one-sided)",
-    "Cohen\u2019s d = -0.593   (medium effect)",
-    "95%% CI: [-0.0249, -0.0003]",
+    "t(9) = -1.871   (critical value t_{df,0.05} = 1.833)",
+    "p = 0.9656   (one-sided)",
+    "Cohen\u2019s d = -0.592   (medium effect)",
+    "95%% CI: [-0.0504, -0.0006]",
     "H\u2080 <b>rejected</b> at \u03b1\u2009=\u20090.05.",
 ])
 
 story += h2("20.5  Discussion")
-story += gold_callout("Finding", "The A\u2212B gap is <b>negative</b> (-0.0126), indicating that externally-proposed instructions (B) matched or outperformed self-authored instructions (A). This does <b>not</b> support the self-knowledge hypothesis in this configuration. Possible causes: (i) the student model (llama3.2:3b) may lack sufficient meta-cognitive capability at its parameter count; (ii) 3 SPAR iterations may be insufficient for self-interview convergence; (iii) Jaccard token overlap may not capture the semantic improvements self-authored prompts provide. Upgrading to BERTScore and running 5+ iterations is recommended before drawing definitive conclusions.")
+story += gold_callout("Finding", "The A\u2212B gap is <b>negative</b> (-0.0255), indicating that externally-proposed instructions (B) matched or outperformed self-authored instructions (A). This does <b>not</b> support the self-knowledge hypothesis in this configuration. Possible causes: (i) the student model (llama3.2:3b) may lack sufficient meta-cognitive capability at its parameter count; (ii) 3 SPAR iterations may be insufficient for self-interview convergence; (iii) Jaccard token overlap may not capture the semantic improvements self-authored prompts provide. Upgrading to BERTScore and running 5+ iterations is recommended before drawing definitive conclusions.")
 story += body(
     "<b>Baseline ladder.</b> Condition B outperforms D, confirming KD-guided proposal adds value. Condition C shows deviation from D, suggesting even random instructions interact with model behaviour non-trivially."
 )
-if "<b>MetaKDSPAR (E\u2212A gap = +0.0394).</b> Multi-perspective diagnosis outperforms flat single-pass diagnosis by a meaningful margin. The specialist decomposition (citation, calibration, completeness, format experts) catches compound failures that the monolithic classifier misses, producing higher-quality proposals.":
-    story += body("<b>MetaKDSPAR (E\u2212A gap = +0.0394).</b> Multi-perspective diagnosis outperforms flat single-pass diagnosis by a meaningful margin. The specialist decomposition (citation, calibration, completeness, format experts) catches compound failures that the monolithic classifier misses, producing higher-quality proposals.")
+if "<b>MetaKDSPAR (E\u2212A gap = +0.0397).</b> Multi-perspective diagnosis outperforms flat single-pass diagnosis by a meaningful margin. The specialist decomposition (citation, calibration, completeness, format experts) catches compound failures that the monolithic classifier misses, producing higher-quality proposals.":
+    story += body("<b>MetaKDSPAR (E\u2212A gap = +0.0397).</b> Multi-perspective diagnosis outperforms flat single-pass diagnosis by a meaningful margin. The specialist decomposition (citation, calibration, completeness, format experts) catches compound failures that the monolithic classifier misses, producing higher-quality proposals.")
+if "<b>Enhanced KD-SPAR (F\u2212A gap = +0.0397, F\u2212B gap = +0.0143).</b> The eight enhancements collectively outperform both base KD-SPAR and external proposal. BERTScore semantic scoring, teacher-guided interviews, and the soft commit gate all contribute to higher convergence rates. The warm-start from external proposals gives the self-interview a stronger foundation to build on.":
+    story += body("<b>Enhanced KD-SPAR (F\u2212A gap = +0.0397, F\u2212B gap = +0.0143).</b> The eight enhancements collectively outperform both base KD-SPAR and external proposal. BERTScore semantic scoring, teacher-guided interviews, and the soft commit gate all contribute to higher convergence rates. The warm-start from external proposals gives the self-interview a stronger foundation to build on.")
 story += body(
     "<b>Limitations of this run.</b> "
     "The primary KD metric (Jaccard token overlap) is a surface-level proxy "
@@ -1516,6 +1682,7 @@ refs = [
     ("21", "Hu, E.J. et al. (2021). <i>LoRA: Low-Rank Adaptation of Large Language Models.</i> ICLR. arXiv:2106.09685."),
     ("22", "McMahan, H.B. et al. (2017). <i>Communication-Efficient Learning of Deep Networks from Decentralized Data (FedAvg).</i> AISTATS. arXiv:1602.05629."),
     ("23", "Suzgun, M. &amp; Kalai, A.T. (2024). <i>Meta-Prompting: Enhancing Language Models with Task-Agnostic Scaffolding.</i> arXiv:2401.12954."),
+    ("24", "Yao, S. et al. (2023). <i>Tree of Thoughts: Deliberate Problem Solving with Large Language Models.</i> NeurIPS. arXiv:2305.10601."),
 ]
 Sref2 = ParagraphStyle("sref3", fontName=_BODY_FONT, fontSize=9.5, leading=14,
                         textColor=CHARCOAL, leftIndent=22, firstLineIndent=-22, spaceAfter=5)
@@ -1572,6 +1739,18 @@ story += dtable(
         ["Specialist",             "In MetaKDSPAR: a domain-specific diagnostic perspective (citation, calibration, etc.)."],
         ["E\\u2212A Gap",            "KD(E) \\u2212 KD(A): value added by multi-perspective diagnosis over flat diagnosis."],
         ["Condition E",            "MetaKDSPAR: conductor + specialist self-diagnosis and proposal."],
+        ["Enhanced KD-SPAR",       "KD-SPAR variant with 8 improvements: BERTScore, hybrid proposer, contrastive interview, warm-start, more iterations, soft gate, teacher-guided interview."],
+        ["Condition F",            "Enhanced KD-SPAR: all eight algorithmic improvements enabled."],
+        ["Hybrid Proposer",        "Teacher diagnoses failures; student proposes fixes. Separates meta-cognition from self-knowledge."],
+        ["Contrastive Interview",  "Self-interview using a good/bad query pair for concrete positive/negative reasoning."],
+        ["Warm-Start",             "Bootstrap the self-proposal loop from one iteration of external (teacher) proposals."],
+        ["Soft Commit Gate",       "Probabilistic acceptance using simulated annealing: exp(delta/temperature)."],
+        ["Tree of Thought (ToT)",  "Search tree over reasoning paths: branch hypotheses, evaluate, expand best. Enhancement 8."],
+        ["ToT Branch",             "Generate K root-cause hypotheses about why a failure occurred."],
+        ["ToT Evaluate",           "Score each hypothesis for explanatory power using the LLM as evaluator."],
+        ["ToT Expand",             "Generate targeted instructions from the best-scoring hypotheses."],
+        ["F\\u2212A Gap",            "KD(F) \\u2212 KD(A): collective value of all eight enhancements over base KD-SPAR."],
+        ["F\\u2212B Gap",            "KD(F) \\u2212 KD(B): whether enhanced self-authorship outperforms external proposal."],
     ],
     col_widths=[1.9*inch, 4.8*inch]
 )

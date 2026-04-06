@@ -1,5 +1,5 @@
 # Copyright (C) 2025 Ashutosh Sinha (ajsinha@gmail.com)
-# Sara (सार) — Knowledge Distillation and KD-SPAR Toolkit  v1.4.0
+# Sara (सार) — Knowledge Distillation and KD-SPAR Toolkit  v1.6.0
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # https://github.com/ashutosh-sinha/sara
 """sara.rag — RAG-specific KD modules. See submodule docstrings for details."""
@@ -21,3 +21,4 @@ from sara.rag.ollama_client import (
 from sara.rag.ollama_pipeline import OllamaRAGPipeline
 from sara.rag.ollama_kd_spar import OllamaKDSPAR, OllamaMultiTeacherKDSPAR, OllamaTeacherSpec
 from sara.rag.kd_spar_meta import MetaKDSPAR, Specialist, SPECIALISTS
+from sara.rag.kd_spar_enhanced import EnhancedKDSPAR, EnhancedConfig
