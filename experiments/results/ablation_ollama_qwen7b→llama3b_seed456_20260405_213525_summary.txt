@@ -1,0 +1,29 @@
+
+=================================================================
+OLLAMA KD-SPAR ABLATION RESULTS  [qwen7b→llama3b]
+=================================================================
+Rank Cond  KD Score    Δ vs D    Cit Fid   Hedge         Time  Description
+-----------------------------------------------------------------
+  1     A     0.4891       +0.0476    0.900      30.000      1889s  KD-SPAR (self-proposed)
+  2     B     0.4641       +0.0226    0.900      80.000       755s  External-proposed
+  3     D     0.4415       +0.0000    0.800      10.000        60s  Baseline (no tuning)
+  4     E     0.4415       +0.0000    0.800      10.000       119s  MetaKDSPAR (meta-prompted)
+  5     C     0.3133       -0.1282    0.600      0.000        72s  Random instructions
+
+=================================================================
+KEY FINDING:
+  ✓ SELF-KNOWLEDGE HYPOTHESIS SUPPORTED
+  A=0.4891 > B=0.4641 > D=0.4415 > C=0.3133
+
+MetaKDSPAR (E) = 0.4415   E−A gap = -0.0476
+  → Meta-prompting overhead not justified for this config
+
+A−B gap (self-authorship value) = +0.0250
+  → STRONG evidence for self-knowledge claim
+
+INTERPRETATION:
+  A > B  → self-authorship adds value beyond the KD signal alone
+  E > A  → meta-prompting improves over flat self-diagnosis
+  B > C  → KD-signal-guided proposals beat random augmentation
+  B > D  → any KD-guided proposal beats no tuning
+  C ≈ D  → random instructions provide no real signal (expected)

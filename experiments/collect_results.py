@@ -1,5 +1,5 @@
 # Copyright (C) 2025 Ashutosh Sinha (ajsinha@gmail.com)
-# Sara (सार) — Knowledge Distillation and KD-SPAR Toolkit  v1.2.0
+# Sara (सार) — Knowledge Distillation and KD-SPAR Toolkit  v1.4.0
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # https://github.com/ashutosh-sinha/sara
 """
@@ -312,7 +312,7 @@ def _build_paper_table(configs: list[ConfigSummary]) -> list[dict]:
 
     rows = []
     d_kd = _mean(pooled.get("D", {}).get("kd", [0.0]))
-    for cond in ["A", "B", "C", "D"]:
+    for cond in ["A", "B", "C", "D", "E"]:
         if cond not in pooled: continue
         m_kd  = _mean(pooled[cond]["kd"])
         s_kd  = _std(pooled[cond]["kd"])
@@ -354,7 +354,7 @@ def print_full_report(agg: AggregatedResults, verbose: bool = False) -> str:
                      f"{'Citation':<18} {'Hedge'}")
         lines.append("  " + "-"*62)
         d_kd = cfg.conditions.get("D", ConditionStats("D","",0,0,0,0,0,0,0)).mean_kd
-        for cond in ["A", "B", "C", "D"]:
+        for cond in ["A", "B", "C", "D", "E"]:
             if cond not in cfg.conditions: continue
             s     = cfg.conditions[cond]
             delta = s.mean_kd - d_kd

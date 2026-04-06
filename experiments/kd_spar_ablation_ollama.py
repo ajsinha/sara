@@ -1,5 +1,5 @@
 # Copyright (C) 2025 Ashutosh Sinha (ajsinha@gmail.com)
-# Sara (सार) — Knowledge Distillation and KD-SPAR Toolkit  v1.2.0
+# Sara (सार) — Knowledge Distillation and KD-SPAR Toolkit  v1.4.0
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # https://github.com/ashutosh-sinha/sara
 """
@@ -418,6 +418,30 @@ def build_A(
     return final_prompt
 
 
+def build_E(
+    teacher_model: str,
+    student_model: str,
+    train_queries: list[str],
+    val_queries: list[str],
+    teacher_responses: dict[str, str],
+    store: RAGVectorStore,
+    iterations: int = 3,
+) -> str:
+    """Condition E: MetaKDSPAR — metaprompting-enhanced self-proposed."""
+    from sara.rag.kd_spar_meta import MetaKDSPAR
+    meta = MetaKDSPAR(
+        student_model=student_model, vector_store=store,
+        base_url=OLLAMA_BASE_URL, temperature=0.3,
+    )
+    final_prompt, _ = meta.run(
+        train_queries=train_queries, val_queries=val_queries,
+        teacher_responses=teacher_responses,
+        iterations=iterations, threshold=0.003,
+        n_proposals=3, top_k_diag=3, top_k_instr=3,
+    )
+    return final_prompt
+
+
 # ── Main ablation ──────────────────────────────────────────────────────────
 
 @dataclass
@@ -531,7 +555,7 @@ def run_ablation(
         log.tick(i)
     log.done(f"{len(t_resps)}/{len(all_q)} teacher responses collected")
 
-    # ── Run four conditions ──────────────────────────────────────────────────
+    # ── Run five conditions ──────────────────────────────────────────────────
     results: list[AblationResult] = []
     cond_defs = [
         ("D", "Baseline (no tuning)",    build_D,
@@ -541,6 +565,8 @@ def run_ablation(
         ("B", "External-proposed",       build_B,
          (teacher_model, student_model, train_q, t_resps, store, iterations)),
         ("A", "KD-SPAR (self-proposed)", build_A,
+         (teacher_model, student_model, train_q, val_q, t_resps, store, iterations)),
+        ("E", "MetaKDSPAR (meta-prompted)", build_E,
          (teacher_model, student_model, train_q, val_q, t_resps, store, iterations)),
     ]
 
@@ -595,9 +621,11 @@ def print_report(results: list[AblationResult], config_label: str) -> str:
     a = next(r for r in results if r.condition == "A")
     b = next(r for r in results if r.condition == "B")
     c = next(r for r in results if r.condition == "C")
+    e = next((r for r in results if r.condition == "E"), None)
     a_kd = a.val_metrics["mean_kd_score"]
     b_kd = b.val_metrics["mean_kd_score"]
     c_kd = c.val_metrics["mean_kd_score"]
+    e_kd = e.val_metrics["mean_kd_score"] if e else 0.0
     gap  = a_kd - b_kd
 
     lines.append(f"\n{'='*65}")
@@ -610,6 +638,16 @@ def print_report(results: list[AblationResult], config_label: str) -> str:
         lines.append("  ✗ INCONCLUSIVE — see details below")
         lines.append(f"  A={a_kd:.4f}  B={b_kd:.4f}  D={d_kd:.4f}  C={c_kd:.4f}")
 
+    if e:
+        ea_gap = e_kd - a_kd
+        lines.append(f"\nMetaKDSPAR (E) = {e_kd:.4f}   E−A gap = {ea_gap:+.4f}")
+        if ea_gap > 0.005:
+            lines.append("  → Meta-prompting improves over base KD-SPAR")
+        elif ea_gap > -0.005:
+            lines.append("  → Meta-prompting comparable to base KD-SPAR")
+        else:
+            lines.append("  → Meta-prompting overhead not justified for this config")
+
     lines.append(f"\nA−B gap (self-authorship value) = {gap:+.4f}")
     if   gap > 0.02: lines.append("  → STRONG evidence for self-knowledge claim")
     elif gap > 0.01: lines.append("  → MODERATE — supports claim; more iterations would strengthen it")
@@ -619,6 +657,7 @@ def print_report(results: list[AblationResult], config_label: str) -> str:
 
     lines.append(f"\nINTERPRETATION:")
     lines.append("  A > B  → self-authorship adds value beyond the KD signal alone")
+    lines.append("  E > A  → meta-prompting improves over flat self-diagnosis")
     lines.append("  B > C  → KD-signal-guided proposals beat random augmentation")
     lines.append("  B > D  → any KD-guided proposal beats no tuning")
     lines.append("  C ≈ D  → random instructions provide no real signal (expected)")

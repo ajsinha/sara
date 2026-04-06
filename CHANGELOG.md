@@ -1,5 +1,69 @@
 # Changelog
 
+## v1.4.0 (April 2025)
+
+### New Features
+
+- **MetaKDSPAR** — new metaprompting-enhanced KD-SPAR variant (`sara/rag/kd_spar_meta.py`).
+  Uses a conductor + 4 specialist architecture (citation, calibration, completeness, format)
+  for multi-perspective diagnosis. Each specialist independently analyses student failures,
+  a conductor synthesises the top diagnoses, and each specialist proposes domain-specific
+  fixes. Extends the ablation to 5 conditions (A-E) for direct comparison.
+
+- **Literature Survey** — new §3b in the paper: comprehensive survey of knowledge
+  distillation, prompt optimisation (OPRO, APE, DSPy, EvoPrompt), self-refinement
+  (Self-Refine, Constitutional AI), federated learning (FedAvg), and metaprompting
+  (Suzgun & Kalai, 2024). §18b Related Work now cross-references §3b.
+
+- **MetaKDSPAR paper section** — new §13b covering architecture, algorithm differences
+  from base KD-SPAR, testable hypothesis (E−A gap), implementation, and trade-offs.
+
+### Experiment Changes
+
+- **Condition E** added to ablation — `build_E()` runs MetaKDSPAR alongside the
+  existing 4 conditions. `collect_results.py`, `results_analysis.py`, and
+  `patch_paper.py` all handle 5 conditions (A-E).
+
+- **E−A gap commentary** — `patch_paper.py` generates adaptive expert commentary
+  on whether multi-perspective diagnosis outperforms flat diagnosis, with honest
+  analysis for positive, neutral, and negative outcomes.
+
+### Documentation
+
+- Example `09_meta_kd_spar.py` added.
+- README, API docs, KD-SPAR variants guide updated for MetaKDSPAR.
+- Glossary updated with MetaKDSPAR terms (conductor, specialist, E−A gap, Condition E).
+- References updated with Suzgun & Kalai (2024) [23].
+- §19.2 Prior Art table includes MetaKDSPAR row.
+- §18.3 Extensions includes MetaKDSPAR-specific future directions.
+
+## v1.3.0 (April 2025)
+
+### Paper — Publication-Quality Section 20
+
+- **Synthetic results removed** — Section 20 in `sara_story.py` is now a clear
+  placeholder that says "This section is automatically replaced with real results."
+  No fabricated numbers remain in the codebase.
+
+- **`patch_paper.py` completely rewritten** — generates a comprehensive, publication-ready
+  Section 20 from `aggregated_results.json` with six subsections:
+  - **§20.1 Experimental Methodology** — hardware, models, iterations, evaluation
+    protocol, query counts, temperature setting, and four-condition design rationale.
+  - **§20.2 Main Results** — measured KD scores, deltas, and citation fidelity with
+    mean ± std across seeds.
+  - **§20.3 A−B Gap Analysis** — per-configuration teacher→student gap table with
+    hypothesis support status.
+  - **§20.4 Statistical Analysis** — computed t-statistic, p-value, Cohen's d effect
+    size, 95% CI, and formal H₀ rejection decision. All values are calculated from
+    actual data, not hardcoded.
+  - **§20.5 Discussion** — adaptive expert commentary that changes based on whether
+    the A−B gap is strong/moderate/marginal/negative. Includes baseline ladder analysis
+    and honest limitations (Jaccard vs BERTScore, human evaluation needs).
+  - **§20.6 Reproducing These Results** — exact shell commands.
+
+- **Honest commentary** — if the A−B gap is negative, the paper says so and offers
+  concrete explanations (model capacity, iteration count, metric choice). No spin.
+
 ## v1.2.0 (April 2025)
 
 ### Improvements
@@ -98,4 +162,4 @@
 
 ---
 
-*Sara (सार) v1.2.0 · Ashutosh Sinha · ajsinha@gmail.com · AGPL-3.0*
+*Sara (सार) v1.4.0 · Ashutosh Sinha · ajsinha@gmail.com · AGPL-3.0*

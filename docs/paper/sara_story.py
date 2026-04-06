@@ -1,5 +1,5 @@
 # Copyright (C) 2025 Ashutosh Sinha (ajsinha@gmail.com)
-# Sara (सार) — Knowledge Distillation and KD-SPAR Toolkit  v1.2.0
+# Sara (सार) — Knowledge Distillation and KD-SPAR Toolkit  v1.4.0
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # https://github.com/ashutosh-sinha/sara
 from pathlib import Path
@@ -66,7 +66,11 @@ story += body(
     "queries to build prompt robustness beyond the common-query distribution; and "
     "<b>Federated KD-SPAR</b>, which enables distributed client sites to jointly "
     "optimise a global prompt without sharing any raw query or response data — only "
-    "proposed instruction strings cross site boundaries.")
+    "proposed instruction strings cross site boundaries. A fifth variant, "
+    "<b>MetaKDSPAR</b>, integrates metaprompting: four specialist diagnostic "
+    "perspectives (citation, calibration, completeness, format) independently "
+    "analyse failures, a conductor synthesises diagnoses, and each specialist "
+    "proposes domain-specific fixes.")
 story += body(
     "The document concludes with a rigorous ablation experiment design that "
     "directly tests the self-knowledge hypothesis: four controlled conditions "
@@ -87,14 +91,14 @@ story += h2("Document Structure")
 story += dtable(
     ["Part", "Sections", "Focus"],
     [
-        ["I — Foundations",              "1–3",   "Theory, soft targets, taxonomy"],
+        ["I — Foundations",              "1–3b",  "Theory, taxonomy, literature survey"],
         ["II — Implementation",          "4–5",   "Code, advanced techniques"],
         ["III — Applications",           "6–7",   "Real-world cases, benchmarks"],
         ["IV — RAG & Model Migration",   "8–9",   "Pipeline, migration, prompt KD"],
-        ["V — KD-SPAR Variants",         "10–13", "Base, Multi-Teacher, Adversarial, Federated"],
+        ["V — KD-SPAR Variants",         "10–13b","Base, Multi-Teacher, Adversarial, Federated, MetaKDSPAR"],
         ["VI — Practitioner Guide",      "14–17", "Hyperparams, eval, best practices, frameworks"],
-        ["VII — Frontier",               "18",    "Future directions"],
-        ["VIII — Novelty & Research",  "19–21", "Novelty assessment, ablation design, local model backend"],
+        ["VII — Frontier",               "18–18e", "Future directions, Related Work, Algorithm 1, Limitations, Conclusion"],
+        ["VIII — Novelty & Research",  "19–21", "Novelty assessment, ablation results, local model backend"],
     ],
     col_widths=[2.1*inch, 0.9*inch, 3.65*inch]
 )
@@ -192,8 +196,83 @@ story += dtable(
 story += pgbrk()
 
 # ══════════════════════════════════════════════════════════════════════════════
-# PART II — IMPLEMENTATION
+# SECTION 3b — LITERATURE SURVEY
 # ══════════════════════════════════════════════════════════════════════════════
+
+story += h1("3b. Literature Survey")
+story += body(
+    "This section surveys the five research threads that KD-SPAR draws upon "
+    "and positions against: knowledge distillation, prompt optimisation, "
+    "self-refinement and meta-cognition, federated learning, and metaprompting.")
+
+story += h2("Knowledge Distillation")
+story += body(
+    "Model compression via knowledge distillation was pioneered by Bucilua et al. (2006) [2] "
+    "and formalised by Hinton, Vinyals &amp; Dean (2015) [1] with the temperature-scaled "
+    "softmax that remains the standard KD formulation today. Romero et al. (2015) [3] "
+    "extended KD to intermediate feature layers (FitNets), showing that hidden representations "
+    "carry information lost in logit-only transfer. Zagoruyko &amp; Komodakis (2017) [5] "
+    "introduced attention transfer, distilling spatial attention maps for improved "
+    "localisation. Park et al. (2019) [4] proposed relational KD (RKD), operating on "
+    "inter-sample structural relationships rather than individual outputs.")
+story += body(
+    "For NLP, Sanh et al. (2019) [6] demonstrated that DistilBERT retains 97% of BERT's "
+    "performance at 40% fewer parameters. Jiao et al. (2020) [7] extended this with "
+    "TinyBERT's attention-head distillation for 7.5\\u00d7 speedup. "
+    "Beyer et al. (2022) [8] showed that <i>patient, consistent</i> distillation "
+    "significantly outperforms one-shot approaches. More recently, Microsoft's Phi-3 [9] "
+    "demonstrated GPT-4-class reasoning in a 3.8B model distilled from synthetic data. "
+    "Gou et al. (2021) [10] provide a comprehensive survey of the field.")
+
+story += h2("Prompt Optimisation")
+story += body(
+    "When model weights are inaccessible (API-only deployment), prompt optimisation "
+    "is the primary lever for improving model behaviour. "
+    "OPRO (Yang et al., 2023) [16] treats an LLM as an optimiser: the model proposes "
+    "prompt candidates scored by task accuracy. APE (Zhou et al., 2023) [18] generates "
+    "and scores candidate prompts automatically. EvoPrompt (Guo et al., 2023) [17] "
+    "applies evolutionary search with LLM-driven mutation and crossover. "
+    "DSPy (Khattab et al., 2024) [14] compiles declarative LLM pipelines into "
+    "optimised prompts using a task metric as the compilation signal.")
+story += body(
+    "All of these methods treat the language model as a <b>black box</b> scored by "
+    "task accuracy. KD-SPAR differs in three fundamental ways: "
+    "(1) the optimisation target is the teacher's output distribution (KD divergence), "
+    "not task accuracy; (2) the model that proposes the instruction is the same model "
+    "that will execute it (self-authorship); and (3) the student first diagnoses its "
+    "own failure modes before proposing a fix, rather than generating generic candidates.")
+
+story += h2("Self-Refinement and Meta-Cognition")
+story += body(
+    "Self-Refine (Madaan et al., 2023) [20] lets a model iteratively improve its "
+    "outputs given self-generated feedback. Constitutional AI (Bai et al., 2022) [19] "
+    "uses self-critique to improve alignment by having the model evaluate its own "
+    "outputs against a set of principles. Both methods improve <i>outputs</i> given a "
+    "<b>fixed system prompt</b>. KD-SPAR improves the <i>instructions themselves</i> "
+    "\\u2014 it operates one level of abstraction higher and is therefore more durable: "
+    "a better prompt benefits all future queries, not just the one being refined.")
+
+story += h2("Federated Learning")
+story += body(
+    "FedAvg (McMahan et al., 2017) [22] enables collaborative model training by sharing "
+    "gradient updates. However, gradient sharing leaks training data through inversion "
+    "attacks. The Federated KD-SPAR variant communicates only natural-language instruction "
+    "strings \\u2014 a strictly weaker information channel than gradient vectors \\u2014 "
+    "providing a stronger practical privacy guarantee for multi-site deployments.")
+
+story += h2("Metaprompting")
+story += body(
+    "Metaprompting (Suzgun &amp; Kalai, 2024) orchestrates a single LLM through a "
+    "conductor \\u2192 specialist architecture: a conductor prompt decomposes a task, "
+    "delegates to expert personas (each with a domain-specific system prompt), and "
+    "synthesises their outputs. The key insight is that one model wearing different "
+    "hats can outperform the same model with a single monolithic prompt. "
+    "MetaKDSPAR (Section 13b) integrates this insight into the KD-SPAR diagnostic "
+    "loop: four specialist perspectives independently analyse student failures, a "
+    "conductor synthesises the diagnoses, and each specialist proposes fixes from "
+    "its domain. This combination of metaprompting + KD as the objective signal + "
+    "student self-authorship has not been explored in the literature.")
+story += pgbrk()
 story += part_banner("II", "Implementation & Techniques", "Code · Pipelines · Advanced Methods")
 story += h1("4. End-to-End Implementation")
 story += embed_diagram(diag_training_pipeline(),
@@ -578,9 +657,111 @@ story += dtable(
     [["Base KD-SPAR",       "Single teacher, common queries",        "None",                         "Single site"],
      ["Multi-Teacher",      "Committee of specialist teachers",      "Non-regression across teachers","Single site"],
      ["Adversarial",        "Long-tail robustness needed",           "Dual-objective validation",    "Single site"],
-     ["Federated",          "Multi-site, private local data",        "No data sharing",              "Multi-site"]],
+     ["Federated",          "Multi-site, private local data",        "No data sharing",              "Multi-site"],
+     ["<b>MetaKDSPAR</b>",  "Compound failures, richer diagnosis",  "Higher inference cost",        "Single site"]],
     col_widths=[1.5*inch, 2.0*inch, 1.9*inch, 0.9*inch]
 )
+story += pgbrk()
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SECTION 13b — META KD-SPAR (Metaprompting-Enhanced)
+# ══════════════════════════════════════════════════════════════════════════════
+
+story += h1("13b. MetaKDSPAR: Metaprompting-Enhanced Prompt Distillation")
+story += body(
+    "Standard KD-SPAR uses a single monolithic diagnostic pass: one call to "
+    "<font name='Courier'>_classify_failure()</font> categorises the failure "
+    "into one of five modes, and one self-interview prompt generates proposals. "
+    "This works well for simple failures but misses <b>compound failures</b> "
+    "— for example, a response that is simultaneously under-hedged <i>and</i> "
+    "missing citations. MetaKDSPAR addresses this limitation using a "
+    "<b>conductor + specialist</b> architecture inspired by metaprompting "
+    "(Suzgun &amp; Kalai, 2024).")
+
+story += h2("13b.1  Architecture")
+story += body(
+    "MetaKDSPAR decomposes the diagnostic and proposal phases into four "
+    "specialist perspectives, each implemented as a distinct system prompt "
+    "on the <i>same student model</i>:")
+story += blist([
+    "<b>Citation Specialist:</b> focuses exclusively on [Doc-N] notation, "
+    "citation placement, and unsupported claims.",
+    "<b>Calibration Specialist:</b> analyses hedging language — detects "
+    "over-hedged and under-hedged responses relative to the teacher.",
+    "<b>Completeness Specialist:</b> compares information coverage, depth, "
+    "and reasoning chain length against the teacher response.",
+    "<b>Format Specialist:</b> analyses structural alignment — paragraph "
+    "organisation, tone, list/prose balance, and presentation style.",
+])
+story += body(
+    "A <b>conductor</b> prompt synthesises the specialist diagnoses, ranks them "
+    "by impact, and selects the top-K failures for the proposal phase. Each "
+    "selected failure is then addressed by its diagnosing specialist, who "
+    "proposes a targeted instruction from its domain expertise. The conductor "
+    "reconciles cross-specialist proposals before the standard "
+    "validate-and-commit gate.")
+
+story += h2("13b.2  Algorithm Differences from Base KD-SPAR")
+story += dtable(
+    ["Phase", "Base KD-SPAR", "MetaKDSPAR"],
+    [["Diagnosis",     "Single _classify_failure() call",      "K specialist prompts + conductor synthesis"],
+     ["Self-Interview","One generic interview prompt",          "Specialist-perspective proposals per domain"],
+     ["Aggregation",   "Score all proposals on mini-eval",      "Conductor reconciles cross-specialist proposals"],
+     ["Validation",    "Same validate-and-commit gate",         "Same validate-and-commit gate"]],
+    col_widths=[1.2*inch, 2.6*inch, 3.0*inch]
+)
+story += body(
+    "The validate-and-commit gate is identical to base KD-SPAR — MetaKDSPAR "
+    "changes only <i>how</i> failures are diagnosed and proposals generated, "
+    "not the acceptance criterion. This ensures a fair comparison in the ablation: "
+    "Condition E (MetaKDSPAR) vs. Condition A (base KD-SPAR) isolates the value "
+    "of multi-perspective diagnosis.")
+
+story += h2("13b.3  Testable Hypothesis")
+story += callout("MetaKDSPAR Hypothesis",
+    "Multi-perspective self-diagnosis catches compound failures that flat "
+    "single-pass diagnosis misses, producing higher-quality prompt amendments. "
+    "The E\\u2212A gap (MetaKDSPAR minus base KD-SPAR) quantifies this advantage. "
+    "A positive E\\u2212A gap, controlling for the same student model, KD metric, "
+    "and validate-and-commit gate, would demonstrate that the conductor + "
+    "specialist architecture adds diagnostic value beyond what a monolithic "
+    "classifier provides.")
+
+story += h2("13b.4  Implementation")
+story += code_block([
+    "from sara.rag.kd_spar_meta import MetaKDSPAR",
+    "",
+    "meta = MetaKDSPAR(",
+    "    student_model='llama3.2:3b',",
+    "    vector_store=store,",
+    "    # Uses 4 built-in specialists by default",
+    ")",
+    "",
+    "final_prompt, history = meta.run(",
+    "    train_queries=train_q,",
+    "    val_queries=val_q,",
+    "    teacher_responses=teacher_responses,",
+    "    iterations=3,",
+    "    top_k_diag=3,     # conductor selects top-3 diagnoses",
+    "    top_k_instr=3,    # top-3 instructions per iteration",
+    ")",
+])
+
+story += h2("13b.5  Trade-offs")
+story += body(
+    "<b>Cost:</b> Each MetaKDSPAR iteration requires K specialist diagnostic "
+    "calls (K=4 by default) plus one conductor call per query, compared to "
+    "one diagnostic call in base KD-SPAR. This is a 5\\u00d7 increase in "
+    "Phase 1 inference cost. The proposal phase also increases because each "
+    "specialist generates proposals from its perspective. "
+    "With local Ollama models the cost is wall-clock time only; with API "
+    "models the per-call cost multiplies accordingly.")
+story += body(
+    "<b>When to use MetaKDSPAR:</b> When the student's failures are consistently "
+    "compound (multiple failure modes per query), when base KD-SPAR iterations "
+    "plateau without improving, or when the student model is large enough "
+    "(7B+) to maintain distinct specialist perspectives effectively. "
+    "For small students (3B), the overhead may not be justified.")
 story += pgbrk()
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -701,6 +882,13 @@ story += blist([
     "<b>Multi-teacher SPAR with dynamic weighting:</b> dynamically re-weight teachers each iteration "
     "based on which teacher's distribution is currently closest to the student's — allocating "
     "interview effort where the gap is largest.",
+    "<b>MetaKDSPAR with learned specialist selection:</b> instead of running all K specialists "
+    "on every query, train a lightweight router that predicts which specialist perspectives "
+    "are most likely to be informative for a given failure pattern — reducing the inference "
+    "overhead from K× to ~2× while preserving diagnostic quality.",
+    "<b>MetaKDSPAR with hierarchical conductors:</b> for complex multi-hop RAG tasks, a "
+    "two-level conductor hierarchy could decompose the task into sub-queries, diagnose "
+    "each sub-query with specialists, and then synthesise at the task level.",
     "<b>Formal evaluation benchmark:</b> a controlled benchmark comparing KD-SPAR against APO, "
     "DSPy, and soft prompts on standardised RAG workloads with known teacher-student pairs.",
 ])
@@ -712,6 +900,11 @@ story += pgbrk()
 
 # ── Related Work ──────────────────────────────────────────────────────────────
 story += h1("18b. Related Work")
+story += body(
+    "<i>A comprehensive literature survey covering all five research threads "
+    "(KD, prompt optimisation, self-refinement, federated learning, metaprompting) "
+    "is provided in Section 3b. This section focuses on the specific points of "
+    "differentiation between KD-SPAR and prior art.</i>")
 story += h2("Prompt Optimisation")
 story += body(
     "<b>OPRO</b> (Yang et al., 2023) treats an LLM as an optimiser that proposes "
@@ -936,7 +1129,8 @@ story += dtable(
      ["Constitutional AI","Alignment","Self-critic","Partial","No","No"],
      ["Self-Refinement","Output quality","Self-editor","Partial","No","Yes"],
      ["Soft Prompt Distil.","KD loss","Gradient","No","Yes","No (needs weights)"],
-     ["<b>KD-SPAR (ours)</b>","KD loss","Self-author","<b>Yes</b>","<b>Yes</b>","<b>Yes</b>"]],
+     ["<b>KD-SPAR (ours)</b>","KD loss","Self-author","<b>Yes</b>","<b>Yes</b>","<b>Yes</b>"],
+     ["<b>MetaKDSPAR (ours)</b>","KD loss","Multi-specialist self-author","<b>Yes</b>","<b>Yes</b>","<b>Yes</b>"]],
     col_widths=[1.5*inch, 1.1*inch, 0.9*inch, 1.0*inch, 0.75*inch, 0.85*inch]
 )
 story += body(
@@ -969,108 +1163,21 @@ story += pgbrk()
 
 # ══════════════════════════════════════════════════════════════════════════════
 # ══════════════════════════════════════════════════════════════════════════════
-# SECTION 20 — EXPERIMENTAL RESULTS  (auto-generated 2026-04-03)
+# SECTION 20 — EXPERIMENTAL RESULTS  (placeholder — replaced by patch_paper.py)
 # ══════════════════════════════════════════════════════════════════════════════
 
 story += h1("20. Experimental Results: Self-Knowledge Hypothesis Test")
 story += body(
-    "This section reports the results of the controlled KD-SPAR ablation "
-    "experiment described in the previous section. All numbers below are "
-    "measured values from 6 experimental run(s) using the codebase "
-    "in the accompanying software package."
+    "<b>This section is a placeholder.</b> It is automatically replaced with "
+    "real experimental results when you run the ablation experiment and execute "
+    "<font name='Courier'>patch_paper.py</font>. "
+    "See Section 21 for the local model setup and the README for instructions."
 )
-
-story += h2("20.1  Main Results Table")
-story += dtable(
-    ["Condition", "Description", "KD Score ↑", "Δ vs D", "Citation Fid."],
-    [
-        ["A", "KD-SPAR (self-proposed)", "0.386 ± 0.001", "+0.045", "0.927 ± 0.014"],
-        ["B", "Externally proposed", "0.360 ± 0.000", "+0.019", "0.806 ± 0.014"],
-        ["C", "Random instructions", "0.341 ± 0.001", "-0.000", "0.598 ± 0.011"],
-        ["D", "No prompt tuning (baseline)", "0.341 ± 0.000", "+0.000", "0.606 ± 0.019"],
-    ],
-    col_widths=[0.7*inch, 2.1*inch, 1.35*inch, 0.9*inch, 1.65*inch]
-)
-
-story += h2("20.2  A−B Gap Analysis — Self-Knowledge Mechanism")
-story += body(
-    "The A−B gap measures the pure value of student self-authorship. "
-    "Both conditions A and B receive identical KD scoring, use the same "
-    "teacher and student models, and pass through the same validate-and-commit "
-    "gate. The only difference is the proposer identity."
-)
-story += dtable(
-    ["Config", "Teacher", "Student", "Seeds", "A−B Gap", "Hypothesis"],
-    [
-        ["llama8b-llama3b", "llama3.1:8b", "llama3.2:3b", "3", "+0.027 ± 0.005", "✓ Supported"],
-        ["qwen7b-llama3b", "qwen2.5:7b", "llama3.2:3b", "3", "+0.025 ± 0.008", "✓ Supported"],
-    ],
-    col_widths=[1.5*inch, 1.5*inch, 1.2*inch, 0.6*inch, 1.3*inch, 1.15*inch]
-)
-story += body(
-    "Mean A−B gap across all configs: <b>+0.026</b>. "
-    "This is strong — gap > 0.02 provides compelling evidence."
-)
-story += gold_callout("Finding",
-    "The self-knowledge hypothesis is <b>supported</b>. KD-SPAR (Condition A) consistently outperforms the externally-proposed baseline (Condition B) with a mean A−B gap of +0.026. Since both conditions use identical KD scoring, teacher model, student model, and validate-and-commit gate, the gap isolates the pure contribution of student self-authorship over external proposal.")
-
-story += h2("20.3  Formal Hypothesis Test")
-story += body(
-    "The self-knowledge hypothesis is framed as a one-sided paired t-test:")
-story += dtable(
-    ["", "Statement"],
-    [
-        ["H\u2080 (null)",      "E[KD(A)] \u2264 E[KD(B)] — student self-authorship adds no value beyond the KD signal alone"],
-        ["H\u2081 (alt.)",     "E[KD(A)] > E[KD(B)] — student self-authorship produces higher alignment than external proposal"],
-        ["Significance", "\u03b1 = 0.05, one-sided paired t-test on per-run A\u2212B gaps"],
-        ["Test stat",    "t = mean(gaps) / (std(gaps) / \u221an);  reject H\u2080 if t > t\u2099,0.05"],
-    ],
-    col_widths=[1.2*inch, 5.5*inch]
-)
-story += body(
-    "With n = 6 runs and a mean A\u2212B gap of +0.026 (std \u2248 0.006), "
-    "the t-statistic is approximately 10.6, well above the critical value "
-    "t\u2085,\u2080.\u2080\u2085 = 2.015. H\u2080 is rejected at \u03b1 = 0.05. "
-    "For publication, run 5+ seeds per configuration and report the exact "
-    "p-value, 95% confidence interval, and Cohen's d effect size.")
-
-story += h2("20.4  Incremental Baseline Ladder")
-story += body(
-    "Examining B, C, D in isolation provides additional validation. "
-    "Condition B (externally-proposed, KD-guided) consistently outperforms "
-    "both C (random) and D (no tuning), confirming the KD signal itself "
-    "is informative independent of who proposes. "
-    "Condition C performs at or below D, confirming random prompt augmentation "
-    "provides no systematic benefit. The control conditions behave as expected.")
-story += pgbrk()
-
-story += h1("20.5  Reproducing These Results")
-story += body(
-    "All results above were generated with the commands below. "
-    "The seed sequence 42, 123, 456, 789, 101 gives 5 seeds per configuration "
-    "— sufficient for a statistically robust A\u2212B gap estimate.")
-story += code_block([
-    "# Install on OryxPro (Pop!_OS / Ubuntu)",
-    "cd sara",
-    "python3 -m venv .venv && source .venv/bin/activate",
-    "pip install -e '.[rag]'",
-    "",
-    "# Pull Ollama models (one-time)",
-    "ollama pull llama3.1:8b && ollama pull llama3.2:3b",
-    "ollama pull qwen2.5:7b",
-    "",
-    "# Run experiment (5 seeds x 2 configs = 10 runs, ~3 hours on RTX 3070 Ti)",
-    "for cfg in 1 2; do",
-    "  for seed in 42 123 456 789 101; do",
-    "    python experiments/kd_spar_ablation_ollama.py \\",
-    "      --config $cfg --iterations 3 --seed $seed",
-    "  done",
-    "done",
-    "",
-    "# Aggregate results and rebuild paper with real numbers",
-    "python experiments/collect_results.py",
-    "python experiments/patch_paper.py --output ~/Desktop/sara_paper.pdf",
-])
+story += callout("To generate this section with real data",
+    "bash setup_and_run.sh  — or manually:  "
+    "python experiments/kd_spar_ablation_ollama.py --config 1 --iterations 3 --seed 42  |  "
+    "python experiments/collect_results.py  |  "
+    "python experiments/patch_paper.py --output docs/paper/Sara_Knowledge_Distillation.pdf")
 story += pgbrk()
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -1275,6 +1382,7 @@ refs = [
     ("20", "Madaan, A. et al. (2023). <i>Self-Refine: Iterative Refinement with Self-Feedback.</i> NeurIPS. arXiv:2303.17651."),
     ("21", "Hu, E.J. et al. (2021). <i>LoRA: Low-Rank Adaptation of Large Language Models.</i> ICLR. arXiv:2106.09685."),
     ("22", "McMahan, H.B. et al. (2017). <i>Communication-Efficient Learning of Deep Networks from Decentralized Data (FedAvg).</i> AISTATS. arXiv:1602.05629."),
+    ("23", "Suzgun, M. &amp; Kalai, A.T. (2024). <i>Meta-Prompting: Enhancing Language Models with Task-Agnostic Scaffolding.</i> arXiv:2401.12954."),
 ]
 Sref2 = ParagraphStyle("sref3", fontName=_BODY_FONT, fontSize=9.5, leading=14,
                         textColor=CHARCOAL, leftIndent=22, firstLineIndent=-22, spaceAfter=5)
@@ -1325,6 +1433,12 @@ story += dtable(
         ["Llama 3.2 3B",           "Meta's 3B model; recommended local SARA student (Config 1)."],
         ["Qwen 2.5 7B",            "Alibaba's 7B model; cross-family teacher for Config 2 ablation."],
         ["OryxPro",                "System76 OryxPro laptop (Pop!_OS); primary hardware for local experiments."],
+        ["MetaKDSPAR",             "KD-SPAR variant using conductor + specialist metaprompting architecture."],
+        ["Metaprompting",          "Orchestrating one LLM through multiple specialist personas via a conductor prompt."],
+        ["Conductor",              "In MetaKDSPAR: the prompt that synthesises specialist diagnoses and reconciles proposals."],
+        ["Specialist",             "In MetaKDSPAR: a domain-specific diagnostic perspective (citation, calibration, etc.)."],
+        ["E\\u2212A Gap",            "KD(E) \\u2212 KD(A): value added by multi-perspective diagnosis over flat diagnosis."],
+        ["Condition E",            "MetaKDSPAR: conductor + specialist self-diagnosis and proposal."],
     ],
     col_widths=[1.9*inch, 4.8*inch]
 )

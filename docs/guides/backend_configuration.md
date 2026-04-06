@@ -1,5 +1,5 @@
 # Backend Configuration Guide
-**Sara v1.2.0** · Copyright (C) 2025 Ashutosh Sinha · AGPL-3.0
+**Sara v1.4.0** · Copyright (C) 2025 Ashutosh Sinha · AGPL-3.0
 
 Sara supports any LLM provider through a single configuration point.
 All examples and experiments read from `configs/backend.yaml` automatically.
@@ -117,4 +117,4 @@ to `get_pipeline()`, `get_client()`, and `get_spar()`. No other files need chang
 
 ---
 
-*Sara v1.2.0 · Ashutosh Sinha · ajsinha@gmail.com · AGPL-3.0*
+*Sara v1.4.0 · Ashutosh Sinha · ajsinha@gmail.com · AGPL-3.0*

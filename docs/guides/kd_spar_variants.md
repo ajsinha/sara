@@ -1,5 +1,5 @@
 # KD-SPAR Variants Guide
-**Sara v1.2.0** · Copyright (C) 2025 Ashutosh Sinha · AGPL-3.0
+**Sara v1.4.0** · Copyright (C) 2025 Ashutosh Sinha · AGPL-3.0
 
 ---
 
@@ -15,6 +15,7 @@ They differ in who proposes, what queries are used, and how validation works.
 | Multi-Teacher | Committee of specialist models | Non-regression across all teachers |
 | Adversarial | Long-tail robustness needed | Dual-objective: hard queries + no standard regression |
 | Federated | Multi-site, private data | No raw data leaves any site |
+| MetaKDSPAR | Compound failures, richer diagnosis | Higher inference cost (K specialist calls) |
 
 ---
 
@@ -153,6 +154,34 @@ final_prompt, history = server.run(rounds=10)
 
 ---
 
+## MetaKDSPAR
+
+Enhances base KD-SPAR with a conductor + specialist architecture.
+Four specialists (citation, calibration, completeness, format) independently
+diagnose failures. A conductor synthesises diagnoses and each specialist
+proposes domain-specific fixes.
+
+```python
+from sara.rag.kd_spar_meta import MetaKDSPAR
+
+meta = MetaKDSPAR(
+    student_model="llama3.2:3b",
+    vector_store=store,
+    # Uses 4 built-in specialists by default
+)
+
+final_prompt, history = meta.run(
+    train_queries=train_q,
+    val_queries=val_q,
+    teacher_responses=teacher_responses,
+    iterations=3,
+    top_k_diag=3,     # conductor selects top-3 diagnoses
+    top_k_instr=3,    # top-3 instructions per iteration
+)
+```
+
+---
+
 ## Interpreting results
 
 ```python
@@ -168,4 +197,4 @@ for it in history:
 
 ---
 
-*Sara v1.2.0 · Ashutosh Sinha · ajsinha@gmail.com · AGPL-3.0*
+*Sara v1.4.0 · Ashutosh Sinha · ajsinha@gmail.com · AGPL-3.0*

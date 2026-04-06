@@ -21,4 +21,4 @@ See also: [README.md](README.md) · [docs/guides/](docs/guides/)
 
 ---
 
-*Sara (सार) v1.2.0 · Ashutosh Sinha · ajsinha@gmail.com · AGPL-3.0*
+*Sara (सार) v1.4.0 · Ashutosh Sinha · ajsinha@gmail.com · AGPL-3.0*

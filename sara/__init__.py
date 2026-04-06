@@ -1,5 +1,5 @@
 # Copyright (C) 2025 Ashutosh Sinha (ajsinha@gmail.com)
-# Sara (सार) — Knowledge Distillation and KD-SPAR Toolkit  v1.2.0
+# Sara (सार) — Knowledge Distillation and KD-SPAR Toolkit  v1.4.0
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # https://github.com/ashutosh-sinha/sara
 """
@@ -45,5 +45,5 @@ __all__ = [
     "phase",
 ]
 
-__version__ = "1.2.0"
+__version__ = "1.4.0"
 __author__  = "Ashutosh Sinha"
