@@ -1,0 +1,314 @@
+{
+  "generated_at": "2026-04-06T11:01:56.904177+00:00",
+  "n_total_runs": 10,
+  "configs": [
+    {
+      "config_label": "llama8b\u2192llama3b",
+      "teacher": "llama3.1:8b",
+      "student": "llama3.2:3b",
+      "n_seeds": 5,
+      "conditions": {
+        "D": {
+          "condition": "D",
+          "description": "Baseline (no tuning)",
+          "n_runs": 5,
+          "mean_kd": 0.564,
+          "std_kd": 0.0,
+          "mean_citation": 0.9,
+          "std_citation": 0.0,
+          "mean_hedge": 10.0,
+          "std_hedge": 0.0,
+          "all_kd_scores": [
+            0.564,
+            0.564,
+            0.564,
+            0.564,
+            0.564
+          ],
+          "configs_seen": [
+            "llama8b\u2192llama3b"
+          ]
+        },
+        "C": {
+          "condition": "C",
+          "description": "Random instructions",
+          "n_runs": 5,
+          "mean_kd": 0.4009,
+          "std_kd": 0.0765,
+          "mean_citation": 0.82,
+          "std_citation": 0.1643,
+          "mean_hedge": 26.0,
+          "std_hedge": 37.1484,
+          "all_kd_scores": [
+            0.4692,
+            0.3168,
+            0.4665,
+            0.3206,
+            0.4314
+          ],
+          "configs_seen": [
+            "llama8b\u2192llama3b"
+          ]
+        },
+        "B": {
+          "condition": "B",
+          "description": "External-proposed",
+          "n_runs": 5,
+          "mean_kd": 0.5699,
+          "std_kd": 0.014,
+          "mean_citation": 0.92,
+          "std_citation": 0.0447,
+          "mean_hedge": 8.0,
+          "std_hedge": 4.4721,
+          "all_kd_scores": [
+            0.5636,
+            0.5636,
+            0.5636,
+            0.5636,
+            0.5949
+          ],
+          "configs_seen": [
+            "llama8b\u2192llama3b"
+          ]
+        },
+        "A": {
+          "condition": "A",
+          "description": "KD-SPAR (self-proposed)",
+          "n_runs": 5,
+          "mean_kd": 0.5447,
+          "std_kd": 0.0176,
+          "mean_citation": 1.0,
+          "std_citation": 0.0,
+          "mean_hedge": 10.0,
+          "std_hedge": 0.0,
+          "all_kd_scores": [
+            0.5761,
+            0.5348,
+            0.5375,
+            0.5375,
+            0.5375
+          ],
+          "configs_seen": [
+            "llama8b\u2192llama3b"
+          ]
+        },
+        "E": {
+          "condition": "E",
+          "description": "MetaKDSPAR (meta-prompted)",
+          "n_runs": 5,
+          "mean_kd": 0.6234,
+          "std_kd": 0.0,
+          "mean_citation": 1.0,
+          "std_citation": 0.0,
+          "mean_hedge": 10.0,
+          "std_hedge": 0.0,
+          "all_kd_scores": [
+            0.6234,
+            0.6234,
+            0.6234,
+            0.6234,
+            0.6234
+          ],
+          "configs_seen": [
+            "llama8b\u2192llama3b"
+          ]
+        }
+      },
+      "ab_gap_mean": -0.0252,
+      "ab_gap_std": 0.0249,
+      "hypothesis_supported": false
+    },
+    {
+      "config_label": "qwen7b\u2192llama3b",
+      "teacher": "qwen2.5:7b",
+      "student": "llama3.2:3b",
+      "n_seeds": 5,
+      "conditions": {
+        "D": {
+          "condition": "D",
+          "description": "Baseline (no tuning)",
+          "n_runs": 5,
+          "mean_kd": 0.0,
+          "std_kd": 0.0,
+          "mean_citation": 0.0,
+          "std_citation": 0.0,
+          "mean_hedge": 0.0,
+          "std_hedge": 0.0,
+          "all_kd_scores": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "configs_seen": [
+            "qwen7b\u2192llama3b"
+          ]
+        },
+        "C": {
+          "condition": "C",
+          "description": "Random instructions",
+          "n_runs": 5,
+          "mean_kd": 0.0,
+          "std_kd": 0.0,
+          "mean_citation": 0.0,
+          "std_citation": 0.0,
+          "mean_hedge": 0.0,
+          "std_hedge": 0.0,
+          "all_kd_scores": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "configs_seen": [
+            "qwen7b\u2192llama3b"
+          ]
+        },
+        "B": {
+          "condition": "B",
+          "description": "External-proposed",
+          "n_runs": 5,
+          "mean_kd": 0.0,
+          "std_kd": 0.0,
+          "mean_citation": 0.0,
+          "std_citation": 0.0,
+          "mean_hedge": 0.0,
+          "std_hedge": 0.0,
+          "all_kd_scores": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "configs_seen": [
+            "qwen7b\u2192llama3b"
+          ]
+        },
+        "A": {
+          "condition": "A",
+          "description": "KD-SPAR (self-proposed)",
+          "n_runs": 5,
+          "mean_kd": 0.0,
+          "std_kd": 0.0,
+          "mean_citation": 0.0,
+          "std_citation": 0.0,
+          "mean_hedge": 0.0,
+          "std_hedge": 0.0,
+          "all_kd_scores": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "configs_seen": [
+            "qwen7b\u2192llama3b"
+          ]
+        },
+        "E": {
+          "condition": "E",
+          "description": "MetaKDSPAR (meta-prompted)",
+          "n_runs": 5,
+          "mean_kd": 0.0,
+          "std_kd": 0.0,
+          "mean_citation": 0.0,
+          "std_citation": 0.0,
+          "mean_hedge": 0.0,
+          "std_hedge": 0.0,
+          "all_kd_scores": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "configs_seen": [
+            "qwen7b\u2192llama3b"
+          ]
+        }
+      },
+      "ab_gap_mean": 0.0,
+      "ab_gap_std": 0.0,
+      "hypothesis_supported": false
+    }
+  ],
+  "overall_ab_gap": -0.0126,
+  "all_ab_gaps": [
+    0.0125,
+    -0.0288,
+    -0.0261,
+    -0.0261,
+    -0.0574,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+  ],
+  "recommendation": "NEGATIVE: External matches/beats self-proposed. Investigate.",
+  "paper_table_rows": [
+    {
+      "condition": "A",
+      "description": "KD-SPAR (self-proposed)",
+      "kd_mean": 0.2723,
+      "kd_std": 0.3852,
+      "kd_str": "0.272 \u00b1 0.385",
+      "delta_vs_d": -0.0096,
+      "delta_str": "-0.010",
+      "cit_mean": 0.5,
+      "cit_std": 0.7071,
+      "cit_str": "0.500 \u00b1 0.707"
+    },
+    {
+      "condition": "B",
+      "description": "External-proposed",
+      "kd_mean": 0.2849,
+      "kd_std": 0.403,
+      "kd_str": "0.285 \u00b1 0.403",
+      "delta_vs_d": 0.003,
+      "delta_str": "+0.003",
+      "cit_mean": 0.46,
+      "cit_std": 0.6505,
+      "cit_str": "0.460 \u00b1 0.651"
+    },
+    {
+      "condition": "C",
+      "description": "Random instructions",
+      "kd_mean": 0.2004,
+      "kd_std": 0.2835,
+      "kd_str": "0.200 \u00b1 0.283",
+      "delta_vs_d": -0.0815,
+      "delta_str": "-0.082",
+      "cit_mean": 0.41,
+      "cit_std": 0.5798,
+      "cit_str": "0.410 \u00b1 0.580"
+    },
+    {
+      "condition": "D",
+      "description": "Baseline (no tuning)",
+      "kd_mean": 0.282,
+      "kd_std": 0.3988,
+      "kd_str": "0.282 \u00b1 0.399",
+      "delta_vs_d": 0.0,
+      "delta_str": "+0.000",
+      "cit_mean": 0.45,
+      "cit_std": 0.6364,
+      "cit_str": "0.450 \u00b1 0.636"
+    },
+    {
+      "condition": "E",
+      "description": "MetaKDSPAR (meta-prompted)",
+      "kd_mean": 0.3117,
+      "kd_std": 0.4408,
+      "kd_str": "0.312 \u00b1 0.441",
+      "delta_vs_d": 0.0297,
+      "delta_str": "+0.030",
+      "cit_mean": 0.5,
+      "cit_std": 0.7071,
+      "cit_str": "0.500 \u00b1 0.707"
+    }
+  ]
+}

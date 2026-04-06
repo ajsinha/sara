@@ -46,6 +46,20 @@ for _name, _path in [
         except Exception:
             pass  # already registered or unavailable
 
+# Register font family mapping so <font name="FreeSerif"> works in Paragraphs
+if os.path.exists(_FREE_SERIF_PATH):
+    try:
+        from reportlab.pdfbase.pdfmetrics import registerFontFamily
+        registerFontFamily(
+            'FreeSerif',
+            normal='FreeSerif',
+            bold='FreeSerif-Bold' if os.path.exists(_FREE_SERIF_B_PATH) else 'FreeSerif',
+            italic='FreeSerif-Italic' if os.path.exists(_FREE_SERIF_I_PATH) else 'FreeSerif',
+            boldItalic='FreeSerif-Bold' if os.path.exists(_FREE_SERIF_B_PATH) else 'FreeSerif',
+        )
+    except Exception:
+        pass
+
 # ── Resolved font names (after registration) ─────────────────────────────────
 _DEVA_FONT      = "FreeSerif"       if os.path.exists(_FREE_SERIF_PATH)   else "Times-Bold"
 _BODY_FONT      = "FreeSerif"       if os.path.exists(_FREE_SERIF_PATH)   else "Times-Roman"

@@ -1,24 +1,24 @@
 
 =================================================================
-OLLAMA KD-SPAR ABLATION RESULTS  [llama8b→llama3b]
+OLLAMA KD-SPAR ABLATION RESULTS  [qwen7b→llama3b]
 =================================================================
 Rank Cond  KD Score    Δ vs D    Cit Fid   Hedge         Time  Description
 -----------------------------------------------------------------
-  1     B     0.5917       +0.0106    1.000      60.000       477s  External-proposed
-  2     A     0.5842       +0.0031    1.000      20.000      1544s  KD-SPAR (self-proposed)
-  3     D     0.5811       +0.0000    0.900      10.000        57s  Baseline (no tuning)
-  4     E     0.5811       +0.0000    0.900      10.000       116s  MetaKDSPAR (meta-prompted)
-  5     C     0.4144       -0.1667    1.000      10.000        81s  Random instructions
+  1     D     0.0000       +0.0000    0.000      0.000         0s  Baseline (no tuning)
+  2     C     0.0000       +0.0000    0.000      0.000         0s  Random instructions
+  3     B     0.0000       +0.0000    0.000      0.000         0s  External-proposed
+  4     A     0.0000       +0.0000    0.000      0.000         0s  KD-SPAR (self-proposed)
+  5     E     0.0000       +0.0000    0.000      0.000         0s  MetaKDSPAR (meta-prompted)
 
 =================================================================
 KEY FINDING:
   ✗ INCONCLUSIVE — see details below
-  A=0.5842  B=0.5917  D=0.5811  C=0.4144
+  A=0.0000  B=0.0000  D=0.0000  C=0.0000
 
-MetaKDSPAR (E) = 0.5811   E−A gap = -0.0031
+MetaKDSPAR (E) = 0.0000   E−A gap = +0.0000
   → Meta-prompting comparable to base KD-SPAR
 
-A−B gap (self-authorship value) = -0.0075
+A−B gap (self-authorship value) = +0.0000
   → NEGATIVE — external matching/beating self-proposed
 
 INTERPRETATION:

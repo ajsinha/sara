@@ -1163,157 +1163,24 @@ story += pgbrk()
 
 # ══════════════════════════════════════════════════════════════════════════════
 # ══════════════════════════════════════════════════════════════════════════════
-
-# ======================================================================
-# SECTION 20 — EXPERIMENTAL RESULTS  (generated 2026-04-06 by patch_paper.py)
-# ======================================================================
+# SECTION 20 — EXPERIMENTAL RESULTS  (placeholder — replaced by patch_paper.py)
+# ══════════════════════════════════════════════════════════════════════════════
 
 story += h1("20. Experimental Results: Self-Knowledge Hypothesis Test")
 story += body(
-    "This section reports measured results from the controlled KD-SPAR ablation "
-    "experiment. All values are computed from <b>10 experimental run(s)</b> "
-    "across 2 model configuration(s). No numbers in this section are "
-    "synthetic \u2014 every value is derived from actual model outputs evaluated "
-    "against teacher response traces."
+    "<b>This section is a placeholder.</b> It is automatically replaced with "
+    "real experimental results when you run the ablation experiment and execute "
+    "<font name='Courier'>patch_paper.py</font>. "
+    "See Section 21 for the local model setup and the README for instructions."
 )
-
-story += h2("20.1  Experimental Methodology")
-story += body(
-    "The ablation isolates the contribution of <i>student self-authorship</i> "
-    "from the KD scoring signal. Five conditions share identical evaluation "
-    "queries, the same composite KD metric (0.3 \u00d7 citation\_match + "
-    "0.7 \u00d7 Jaccard token overlap), and the same validate-and-commit gate "
-    "(\u03b4 \u2265 0.003). Only the source of proposed instructions differs:"
-)
-story += blist([
-    "<b>Condition A \u2014 KD-SPAR (self-proposed):</b> The student model "
-    "diagnoses its own failure modes against teacher traces and proposes "
-    "targeted instruction amendments via the four-phase SPAR loop.",
-    "<b>Condition B \u2014 Externally proposed:</b> The teacher model "
-    "proposes instructions using the same KD divergence signal and failure "
-    "diagnosis. The student executes but does not author.",
-    "<b>Condition C \u2014 Random instructions:</b> Generic fragments drawn "
-    "from a fixed pool. Tests whether adding instructions helps independent "
-    "of content.",
-    "<b>Condition D \u2014 Baseline:</b> Default system prompt. The floor.",
-    "<b>Condition E \u2014 MetaKDSPAR (meta-prompted):</b> The student uses a "
-    "conductor + specialist architecture: four specialist perspectives "
-    "(citation, calibration, completeness, format) independently diagnose "
-    "failures; a conductor synthesises the top diagnoses; each specialist "
-    "proposes fixes from its domain. Tests whether multi-perspective "
-    "self-diagnosis outperforms flat single-pass diagnosis (Condition A).",
-])
-story += body(
-    "<b>Hardware and models.</b> Experiments were run on a System76 OryxPro "
-    "(Pop!_OS, NVIDIA RTX 3070 Ti) using the Ollama local inference runtime "
-    "at temperature 0.0 for full reproducibility. "
-    "Teacher(s): qwen2.5:7b, llama3.1:8b. "
-    "Student(s): llama3.2:3b. "
-    "Each configuration used 5 seed(s) with 3 SPAR iterations per "
-    "condition, yielding 10 total runs."
-)
-story += body(
-    "<b>Evaluation.</b> Each condition\u2019s final prompt is evaluated on "
-    "10\u201315 held-out validation queries. The student\u2019s response is "
-    "scored against the teacher\u2019s cached response. Citation fidelity and "
-    "hedging match are reported as secondary diagnostics. Results are "
-    "mean \u00b1 std across seeds."
-)
-
-story += h2("20.2  Main Results")
-story += dtable(
-    ["Cond.", "Description", "KD Score \u2191", "\u0394 vs D", "Citation Fid."],
-    [
-        ["A", "KD-SPAR (student self-proposed)", "0.272 ± 0.385", "-0.010", "0.500 ± 0.707"],
-        ["B", "Externally proposed (teacher)", "0.285 ± 0.403", "+0.003", "0.460 ± 0.651"],
-        ["C", "Random instructions", "0.200 ± 0.283", "-0.082", "0.410 ± 0.580"],
-        ["D", "No prompt tuning (baseline)", "0.282 ± 0.399", "+0.000", "0.450 ± 0.636"],
-        ["E", "MetaKDSPAR (meta-prompted)", "0.312 ± 0.441", "+0.030", "0.500 ± 0.707"],
-    ],
-    col_widths=[0.55*inch, 2.15*inch, 1.35*inch, 0.85*inch, 1.80*inch]
-)
-
-story += h2("20.3  A\u2212B Gap Analysis")
-story += body(
-    "The A\u2212B gap measures the pure value of self-authorship. Both "
-    "conditions are identical except that A\u2019s proposals come from the "
-    "student and B\u2019s from the teacher."
-)
-story += dtable(
-    ["Config", "Teacher", "Student", "Seeds", "A\u2212B Gap", "H\u2081"],
-    [
-        ["llama8b→llama3b", "llama3.1:8b", "llama3.2:3b", "5", "-0.0252 \u00b1 0.0249", "\u2717 Not supported"],
-        ["qwen7b→llama3b", "qwen2.5:7b", "llama3.2:3b", "5", "+0.0000 \u00b1 0.0000", "\u2717 Not supported"],
-    ],
-    col_widths=[1.5*inch, 1.4*inch, 1.1*inch, 0.55*inch, 1.5*inch, 1.15*inch]
-)
-story += body(
-    "Overall mean A\u2212B gap: <b>-0.0126</b> \u00b1 0.0212 "
-    "(n=10, negative)."
-)
-
-story += h2("20.4  Statistical Analysis")
-story += body(
-    "One-sided paired t-test on per-run A\u2212B gaps:")
-story += dtable(
-    ["", "Statement"],
-    [
-        ["H\u2080 (null)",  "E[KD(A)] \u2264 E[KD(B)] \u2014 self-authorship adds no value"],
-        ["H\u2081 (alt.)", "E[KD(A)] > E[KD(B)] \u2014 self-authorship improves alignment"],
-    ],
-    col_widths=[1.2*inch, 5.5*inch]
-)
-story += body(
-    "n = 10, mean gap = -0.0126, std = 0.0212, "
-    "SE = 0.0067."
-)
-story += blist([
-    "t(9) = -1.875   (critical value t_{df,0.05} = 1.833)",
-    "p = 0.9658   (one-sided)",
-    "Cohen\u2019s d = -0.593   (medium effect)",
-    "95%% CI: [-0.0249, -0.0003]",
-    "H\u2080 <b>rejected</b> at \u03b1\u2009=\u20090.05.",
-])
-
-story += h2("20.5  Discussion")
-story += gold_callout("Finding", "The A\u2212B gap is <b>negative</b> (-0.0126), indicating that externally-proposed instructions (B) matched or outperformed self-authored instructions (A). This does <b>not</b> support the self-knowledge hypothesis in this configuration. Possible causes: (i) the student model (llama3.2:3b) may lack sufficient meta-cognitive capability at its parameter count; (ii) 3 SPAR iterations may be insufficient for self-interview convergence; (iii) Jaccard token overlap may not capture the semantic improvements self-authored prompts provide. Upgrading to BERTScore and running 5+ iterations is recommended before drawing definitive conclusions.")
-story += body(
-    "<b>Baseline ladder.</b> Condition B outperforms D, confirming KD-guided proposal adds value. Condition C shows deviation from D, suggesting even random instructions interact with model behaviour non-trivially."
-)
-if "<b>MetaKDSPAR (E\u2212A gap = +0.0394).</b> Multi-perspective diagnosis outperforms flat single-pass diagnosis by a meaningful margin. The specialist decomposition (citation, calibration, completeness, format experts) catches compound failures that the monolithic classifier misses, producing higher-quality proposals.":
-    story += body("<b>MetaKDSPAR (E\u2212A gap = +0.0394).</b> Multi-perspective diagnosis outperforms flat single-pass diagnosis by a meaningful margin. The specialist decomposition (citation, calibration, completeness, format experts) catches compound failures that the monolithic classifier misses, producing higher-quality proposals.")
-story += body(
-    "<b>Limitations of this run.</b> "
-    "The primary KD metric (Jaccard token overlap) is a surface-level proxy "
-    "that does not capture semantic equivalence. A response that paraphrases "
-    "the teacher will score lower than one that copies tokens. "
-    "BERTScore F1 is recommended as the primary metric for camera-ready "
-    "results. Human evaluation (3 raters, Cohen\u2019s \u03ba > 0.6) "
-    "would strengthen the claim for top-venue submission."
-)
-
-story += h2("20.6  Reproducing These Results")
-story += body(
-    "All results were generated on a single GPU workstation. Identical seeds "
-    "at temperature 0.0 yield identical outputs:"
-)
-story += code_block([
-    "# Full reproduction",
-    "cd sara && bash setup_and_run.sh",
-    "",
-    "# Or manually:",
-    "pip install -e '.[rag]' reportlab pypdf",
-    "for cfg in 1 2; do",
-    "  for seed in 42 123 456 789 101; do",
-    "    python experiments/kd_spar_ablation_ollama.py \\",
-    "      --config $cfg --iterations 3 --seed $seed",
-    "  done",
-    "done",
-    "python experiments/collect_results.py",
-    "python experiments/patch_paper.py",
-])
+story += callout("To generate this section with real data",
+    "bash setup_and_run.sh  — or manually:  "
+    "python experiments/kd_spar_ablation_ollama.py --config 1 --iterations 3 --seed 42  |  "
+    "python experiments/collect_results.py  |  "
+    "python experiments/patch_paper.py --output docs/paper/Sara_Knowledge_Distillation.pdf")
 story += pgbrk()
 
+# ══════════════════════════════════════════════════════════════════════════════
 # SECTION 21 — LOCAL MODEL BACKEND (OLLAMA)
 # ══════════════════════════════════════════════════════════════════════════════
 
