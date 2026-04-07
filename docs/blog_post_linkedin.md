@@ -113,7 +113,7 @@ The paper covers the full arc: KD theory, taxonomy, implementations, benchmarks,
 ## Try It
 
 ```bash
-git clone https://github.com/ashutosh-sinha/sara
+git clone https://github.com/ajsinha/sara
 cd sara
 pip install -e ".[rag]"
 ollama pull llama3.1:8b && ollama pull llama3.2:3b

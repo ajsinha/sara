@@ -1,7 +1,7 @@
 # Copyright (C) 2025 Ashutosh Sinha (ajsinha@gmail.com)
-# Sara (सार) — Knowledge Distillation and KD-SPAR Toolkit  v1.6.0
+# Sara (सार) — Knowledge Distillation and KD-SPAR Toolkit  v1.7.0
 # SPDX-License-Identifier: AGPL-3.0-or-later
-# https://github.com/ashutosh-sinha/sara
+# https://github.com/ajsinha/sara
 """sara.rag — RAG-specific KD modules. See submodule docstrings for details."""
 from sara.rag.pipeline import RAGVectorStore, RAGPipeline, AnthropicClient, Document, RAGResponse, chunk_text, TEACHER_MODEL, STUDENT_MODEL, EMBEDDING_MODEL, DEFAULT_SYSTEM
 from sara.rag.evaluation import EquivalenceReport, run_equivalence_suite

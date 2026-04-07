@@ -1,5 +1,5 @@
 {
-  "timestamp": "20260406_110831",
+  "timestamp": "20260406_174923",
   "config": "qwen7b\u2192llama3b",
   "seed": 101,
   "teacher": "qwen2.5:7b",

@@ -4,25 +4,25 @@ OLLAMA KD-SPAR ABLATION RESULTS  [llama8b→llama3b]
 =================================================================
 Rank Cond  KD Score    Δ vs D    Cit Fid   Hedge         Time  Description
 -----------------------------------------------------------------
-  1     B     0.6250       +0.0610    1.000      0.000        65s  External-proposed
-  2     E     0.6234       +0.0594    1.000      10.000        14s  MetaKDSPAR (meta-prompted)
-  3     F     0.6234       +0.0594    1.000      10.000        29s  Enhanced KD-SPAR (all improvem
-  4     D     0.5640       +0.0000    0.900      10.000         7s  Baseline (no tuning)
-  5     A     0.5207       -0.0433    0.900      20.000       197s  KD-SPAR (self-proposed)
-  6     C     0.4665       -0.0975    0.900      90.000        11s  Random instructions
+  1     E     0.7481       +0.0757    1.000      10.000        14s  MetaKDSPAR (meta-prompted)
+  2     F     0.7481       +0.0757    1.000      10.000        22s  Enhanced KD-SPAR (all improvem
+  3     B     0.7386       +0.0662    1.000      20.000       113s  External-proposed
+  4     D     0.6724       +0.0000    0.900      10.000         9s  Baseline (no tuning)
+  5     A     0.6551       -0.0173    1.000      10.000       377s  KD-SPAR (self-proposed)
+  6     C     0.4444       -0.2280    0.600      0.000        10s  Random instructions
 
 =================================================================
 KEY FINDING:
   ✗ INCONCLUSIVE — see details below
-  A=0.5207  B=0.6250  D=0.5640  C=0.4665
+  A=0.6551  B=0.7386  D=0.6724  C=0.4444
 
-MetaKDSPAR (E) = 0.6234   E−A gap = +0.1027
+MetaKDSPAR (E) = 0.7481   E−A gap = +0.0930
   → Meta-prompting improves over base KD-SPAR
 
-Enhanced (F) = 0.6234   F−A gap = +0.1027   F−B gap = -0.0016
-  → Enhancements improve over base but not external
+Enhanced (F) = 0.7481   F−A gap = +0.0930   F−B gap = +0.0095
+  → Enhanced KD-SPAR outperforms external proposal
 
-A−B gap (self-authorship value) = -0.1043
+A−B gap (self-authorship value) = -0.0835
   → NEGATIVE — external matching/beating self-proposed
 
 INTERPRETATION:

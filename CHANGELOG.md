@@ -1,5 +1,44 @@
 # Changelog
 
+## v1.7.0 (April 2025)
+
+### Addressing Limitations — Six Targeted Improvements
+
+1. **BERTScore throughout** — ALL ablation conditions now use `kd_score_v2`
+   (0.3×citation + 0.5×BERTScore + 0.2×Jaccard) by default. Pass `--jaccard`
+   to revert. This is the single highest-impact change — fairer comparison
+   across conditions since Jaccard was penalising good paraphrases.
+
+2. **Human evaluation toolkit** — `experiments/human_eval.py` generates blind
+   evaluation CSV sheets with answer keys and rater instructions. Computes
+   Cohen's κ (2 raters) or Fleiss' κ (3+ raters) for inter-rater agreement.
+   Per-condition mean human scores reported alongside automatic metrics.
+
+3. **Code generation domain** — new `CODE_CORPUS` (4 Python docs),
+   `CODE_TRAIN_QUERIES` (12), `CODE_VAL_QUERIES` (8). Run with
+   `--domain code` for cross-domain evidence. Same 6-condition ablation
+   on coding tasks tests generalisation beyond RAG QA.
+
+4. **Larger student configs** — Config 4 (qwen2.5:14b → llama3.1:8b) and
+   Config 5 (qwen2.5:14b → qwen2.5:7b) test whether the base A−B gap
+   becomes positive when the student has more meta-cognitive capacity (7-8B).
+
+5. **Convergence theorem** — formal Theorem 1 in paper §18d.1 proves
+   monotone convergence of the hard-gate SPAR loop. Proof sketch for
+   soft-gate convergence via Metropolis-Hastings / simulated annealing argument.
+
+6. **Active learning** — `uncertainty_sample()` and `run_active_learning()`
+   methods added to `AdversarialKDSPAR`. Generates multiple responses per query
+   at elevated temperature, measures KD score variance, selects the most
+   uncertain queries for the next SPAR iteration. Dual-objective validation
+   ensures adversarial improvement without standard regression.
+
+### Paper
+
+- §18d.1 "Convergence Analysis" with Theorem 1 (monotone convergence, proof
+  sketch, soft-gate discussion)
+- §18c.1 "Prompt Templates" — Self-Interview template in structured format
+
 ## v1.6.0 (April 2025)
 
 ### New Features
@@ -232,4 +271,4 @@
 
 ---
 
-*Sara (सार) v1.6.0 · Ashutosh Sinha · ajsinha@gmail.com · AGPL-3.0*
+*Sara (सार) v1.7.0 · Ashutosh Sinha · ajsinha@gmail.com · AGPL-3.0*

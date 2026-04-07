@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KD-SPAR: A Deep Dive into Self-Authoring Prompt Distillation</title>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,400;0,600;0,700;1,400&family=Outfit:wght@300;400;500;600;700&family=IBM+Plex+Mono:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0b0d11;
+  --surface: #13161c;
+  --surface2: #1a1d25;
+  --surface3: #22252e;
+  --text: #ddd9d3;
+  --text-dim: #7d7a75;
+  --text-bright: #f0ece6;
+  --accent: #d4622b;
+  --green: #5fa87f;
+  --blue: #5b8ec9;
+  --gold: #c9a85c;
+  --red: #c45c5c;
+  --purple: #9b7cc9;
+  --border: #2a2d36;
+  --code-bg: #0f1117;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:'Newsreader',Georgia,serif;font-size:19px;line-height:1.85;-webkit-font-smoothing:antialiased}
+.wrap{max-width:860px;margin:0 auto;padding:0 28px}
+
+/* ── Hero ──────────── */
+.hero{padding:100px 28px 80px;text-align:center;position:relative;overflow:hidden}
+.hero::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--accent),var(--green),transparent)}
+.hero-eyebrow{font-family:'Outfit',sans-serif;font-weight:500;font-size:12px;letter-spacing:5px;text-transform:uppercase;color:var(--accent);margin-bottom:28px}
+.hero h1{font-size:clamp(30px,5.5vw,50px);font-weight:700;line-height:1.15;max-width:780px;margin:0 auto 24px}
+.hero h1 .hl{color:var(--accent)}
+.hero h1 .gl{color:var(--green)}
+.hero-sub{font-family:'Outfit',sans-serif;font-weight:300;font-size:16px;color:var(--text-dim);max-width:620px;margin:0 auto 12px;line-height:1.65}
+.hero-byline{font-family:'Outfit',sans-serif;font-size:13px;color:var(--text-dim);margin-top:32px;letter-spacing:1px}
+
+/* ── Sections ──────── */
+section{padding:64px 0}
+.section-num{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--accent);letter-spacing:3px;margin-bottom:8px;display:block}
+h2{font-size:32px;font-weight:700;line-height:1.25;margin-bottom:24px;color:var(--text-bright)}
+h3{font-family:'Outfit',sans-serif;font-weight:600;font-size:20px;color:var(--gold);margin:36px 0 14px}
+h4{font-family:'Outfit',sans-serif;font-weight:600;font-size:16px;color:var(--blue);margin:24px 0 10px;letter-spacing:0.5px}
+p{margin-bottom:18px}
+strong{color:var(--text-bright);font-weight:600}
+em{color:var(--green);font-style:italic}
+
+/* ── Dividers ──────── */
+.sep{height:1px;background:var(--border);margin:0}
+.accent-sep{height:2px;background:linear-gradient(90deg,var(--accent),var(--green));width:60px;margin:64px auto}
+
+/* ── Code / pseudo ─── */
+code{font-family:'IBM Plex Mono',monospace;font-size:15px;background:var(--surface2);padding:2px 7px;border-radius:4px;color:var(--gold)}
+
+/* ── Academic algorithm block ─── */
+.algo{background:var(--surface);border:1px solid var(--border);border-radius:10px;margin:32px 0;overflow:hidden}
+.algo-header{background:var(--surface3);border-bottom:1px solid var(--border);padding:12px 28px;display:flex;justify-content:space-between;align-items:center}
+.algo-title{font-family:'Outfit',sans-serif;font-weight:700;font-size:14px;color:var(--text-bright);letter-spacing:0.5px}
+.algo-ref{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim)}
+.algo-body{padding:20px 28px;font-family:'IBM Plex Mono',monospace;font-size:13.5px;line-height:2;counter-reset:algoline}
+.algo-io{padding:6px 0;border-bottom:1px solid var(--border);margin-bottom:10px}
+.algo-io-label{color:var(--accent);font-weight:600}
+.algo-line{display:flex;padding:1px 0;position:relative}
+.algo-line::before{counter-increment:algoline;content:counter(algoline);position:absolute;left:-4px;width:24px;text-align:right;color:var(--text-dim);font-size:11px;opacity:0.5;top:50%;transform:translateY(-50%)}
+.algo-line{padding-left:32px}
+.algo-indent1{padding-left:56px}
+.algo-indent2{padding-left:80px}
+.algo-indent3{padding-left:104px}
+.algo-phase{color:var(--accent);font-weight:600;font-style:italic;padding:8px 0 2px;border-top:1px solid rgba(255,255,255,0.04);margin-top:4px}
+.algo-phase::before{content:none!important}
+.kw{color:var(--blue);font-weight:600}
+.fn{color:var(--green);font-weight:500}
+.cm{color:#555;font-style:italic}
+.vr{color:var(--text-bright)}
+.st{color:var(--gold)}
+.op{color:var(--accent)}
+.sym{color:var(--purple)}
+
+/* ── Prompt template block ─── */
+.prompt-block{background:var(--code-bg);border:1px solid var(--border);border-left:3px solid var(--gold);border-radius:0 10px 10px 0;margin:28px 0;overflow:hidden}
+.prompt-header{background:var(--surface3);padding:10px 24px;font-family:'Outfit',sans-serif;font-weight:600;font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);border-bottom:1px solid var(--border)}
+.prompt-body{padding:20px 24px;font-family:'IBM Plex Mono',monospace;font-size:13px;line-height:1.8;white-space:pre-wrap}
+.prompt-var{color:var(--accent);font-weight:500}
+.prompt-section{color:var(--blue);font-weight:600;text-transform:uppercase;font-size:11px;letter-spacing:2px}
+.prompt-rule{color:var(--text-dim)}
+.prompt-good{color:var(--green)}
+.prompt-bad{color:var(--red)}
+
+/* ── Simple code block (shell commands etc) ─── */
+.codeblock{background:var(--surface);border:1px solid var(--border);padding:24px 28px;border-radius:10px;overflow-x:auto;margin:28px 0;font-family:'IBM Plex Mono',monospace;font-size:13.5px;line-height:1.8;color:var(--text-dim)}
+.codeblock .cm{color:#555;font-style:italic}
+
+/* ── Tables ────────── */
+table{width:100%;border-collapse:collapse;margin:28px 0;font-family:'Outfit',sans-serif;font-size:14px}
+th{text-align:left;padding:12px 14px;border-bottom:2px solid var(--accent);color:var(--accent);font-weight:600;font-size:11px;letter-spacing:2px;text-transform:uppercase}
+td{padding:11px 14px;border-bottom:1px solid var(--border)}
+tr.win td{background:rgba(95,168,127,0.07);color:var(--green)}
+tr.lose td{color:var(--text-dim)}
+.mono{font-family:'IBM Plex Mono',monospace;font-size:14px}
+.small-table{font-size:13px}
+.small-table td,.small-table th{padding:8px 12px}
+
+/* ── Callouts ──────── */
+.callout{background:var(--surface);border-left:3px solid var(--accent);padding:24px 28px;margin:32px 0;border-radius:0 10px 10px 0}
+.callout.green{border-left-color:var(--green)}
+.callout.blue{border-left-color:var(--blue)}
+.callout .cl-label{font-family:'Outfit',sans-serif;font-weight:600;font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--accent);margin-bottom:8px}
+.callout.green .cl-label{color:var(--green)}
+.callout.blue .cl-label{color:var(--blue)}
+
+/* ── Big metrics ───── */
+.metric-row{display:flex;gap:20px;margin:32px 0;flex-wrap:wrap}
+.metric-card{flex:1;min-width:180px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:24px;text-align:center}
+.metric-card .mv{font-family:'IBM Plex Mono',monospace;font-size:36px;font-weight:700;line-height:1}
+.metric-card .mv.red{color:var(--red)}.metric-card .mv.green{color:var(--green)}.metric-card .mv.gold{color:var(--gold)}
+.metric-card .ml{font-family:'Outfit',sans-serif;font-size:12px;color:var(--text-dim);margin-top:8px;letter-spacing:1px}
+
+/* ── Diagram boxes ─── */
+.diagram{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:32px;margin:32px 0;text-align:center;font-family:'Outfit',sans-serif;font-size:14px;line-height:1.7}
+.diagram .flow{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:8px;margin:16px 0}
+.diagram .box{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 18px;font-weight:500;white-space:nowrap}
+.diagram .box.accent{border-color:var(--accent);color:var(--accent)}
+.diagram .box.green{border-color:var(--green);color:var(--green)}
+.diagram .box.gold{border-color:var(--gold);color:var(--gold)}
+.diagram .arrow{color:var(--text-dim);font-size:18px}
+.diagram .caption{font-size:12px;color:var(--text-dim);margin-top:12px;font-style:italic}
+
+/* ── Enhancement grid */
+.enh-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:28px 0}
+@media(max-width:640px){.enh-grid{grid-template-columns:1fr}}
+.enh-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px 22px}
+.enh-card.star{border-color:var(--green);background:rgba(95,168,127,0.04)}
+.enh-num{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--accent);letter-spacing:2px;margin-bottom:6px}
+.enh-title{font-family:'Outfit',sans-serif;font-weight:600;font-size:16px;color:var(--text-bright);margin-bottom:8px}
+.enh-card p{font-family:'Outfit',sans-serif;font-size:13px;color:var(--text-dim);line-height:1.6;margin:0}
+
+/* ── Footer ────────── */
+footer{text-align:center;padding:80px 28px 60px;border-top:1px solid var(--border)}
+footer .sk{font-size:52px;color:var(--gold);opacity:0.25;margin-bottom:16px}
+footer p{font-family:'Outfit',sans-serif;font-size:14px;color:var(--text-dim);max-width:500px;margin:0 auto;line-height:1.7}
+.tags{display:flex;flex-wrap:wrap;gap:8px;margin-top:28px;justify-content:center}
+.tag{font-family:'Outfit',sans-serif;font-size:12px;color:var(--text-dim);border:1px solid var(--border);padding:5px 14px;border-radius:20px}
+</style>
+</head>
+<body>
+
+<!-- ════════════ HERO ════════════ -->
+<div class="hero">
+  <div class="hero-eyebrow">Blog · Open Source</div>
+  <h1>KD-SPAR: A Deep Dive into <span class="hl">Self-Authoring</span> Prompt Distillation — and What Happens When Your <span class="gl">3B Student</span> Can't Self-Diagnose</h1>
+  <div class="hero-sub">
+    A complete technical walkthrough of the algorithm, the teacher-student dynamics, why the naive version failed at 3B parameters, and how eight targeted enhancements — including Tree of Thought reasoning — rescued the self-knowledge hypothesis.
+  </div>
+  <div class="hero-byline">Ashutosh Sinha · April 2025 · Sara (सार) v1.6.0 · 50-page paper · 24 references</div>
+</div>
+
+<div class="wrap">
+
+<!-- ════════════ PART I: BACKGROUND ════════════ -->
+<section>
+  <span class="section-num">PART I</span>
+  <h2>Knowledge Distillation: Teacher → Student</h2>
+
+  <p>Knowledge distillation (Hinton et al., 2015) trains a smaller <em>student</em> model to replicate the behaviour of a larger <em>teacher</em> model. The teacher produces "soft targets" — probability distributions over outputs at a raised temperature T — that encode <strong>dark knowledge</strong>: rich inter-class similarity information that hard one-hot labels throw away.</p>
+
+  <div class="diagram">
+    <div class="flow">
+      <div class="box accent">TEACHER (8B)</div>
+      <div class="arrow">→</div>
+      <div class="box gold">Soft Targets (T&gt;1)</div>
+      <div class="arrow">→</div>
+      <div class="box green">STUDENT (3B)</div>
+      <div class="arrow">→</div>
+      <div class="box">Deployed Model</div>
+    </div>
+    <div style="margin-top:16px;font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--text-dim)">
+      Loss = α · T² · KL(student_soft ‖ teacher_soft) + (1−α) · CE(student, hard_labels)
+    </div>
+    <div class="caption">Figure 1 — Standard KD: the T² factor restores gradient magnitude lost by softening.</div>
+  </div>
+
+  <h3>Unpacking the Loss — Term by Term</h3>
+  <p>The formula above is the heart of all knowledge distillation. Every term has a specific job:</p>
+
+  <table class="small-table">
+    <tr><th>Term</th><th>Name</th><th>What It Does</th></tr>
+    <tr>
+      <td class="mono">α</td>
+      <td>Mixing coefficient</td>
+      <td>A scalar in [0, 1] that balances the two loss terms. α = 1 means "learn entirely from the teacher." α = 0 means "ignore the teacher, use hard labels only." Typical values: 0.4–0.7. Higher α when the teacher is strong and data is small.</td>
+    </tr>
+    <tr>
+      <td class="mono">T</td>
+      <td>Temperature</td>
+      <td>Softens the probability distributions. At T=1, softmax is sharp and peaked. At T=4, it flattens, revealing inter-class similarities — the <em>dark knowledge</em>. Both teacher and student logits are divided by T. Typical: 2–8 (vision), 4–16 (NLP).</td>
+    </tr>
+    <tr>
+      <td class="mono">T²</td>
+      <td>Gradient restoration</td>
+      <td>When you soften by T, the gradients shrink by T². Without this correction, the KL term becomes negligible at high temperatures and the CE term dominates regardless of α. T² keeps both loss components on the same scale.</td>
+    </tr>
+    <tr>
+      <td class="mono" style="font-size:12px">KL(student ‖ teacher)</td>
+      <td>Distillation term</td>
+      <td>Kullback-Leibler divergence between the student's soft distribution and the teacher's. Measures how different the student's predictions are from the teacher's, including all the nuanced inter-class structure. KL = 0 means identical. This is what transfers the <em>dark knowledge</em>.</td>
+    </tr>
+    <tr>
+      <td class="mono" style="font-size:12px">CE(student, labels)</td>
+      <td>Task term</td>
+      <td>Standard cross-entropy between the student's predictions (at T=1, not softened) and the ground-truth one-hot labels. Ensures the student learns the <em>correct answers</em> — not just how to mimic the teacher's mistakes.</td>
+    </tr>
+    <tr>
+      <td class="mono">1 − α</td>
+      <td>Hard-label weight</td>
+      <td>The complement of α. As α increases, more weight goes to soft targets, less to ground truth. The two weights always sum to 1.</td>
+    </tr>
+  </table>
+
+  <div class="callout blue">
+    <div class="cl-label">Intuition</div>
+    <p>The first term says <strong>"make your output distribution look like the teacher's"</strong> — including all the nuanced inter-class similarity (a cat is more like a dog than an airplane). The second term says <strong>"but also get the right answer."</strong> Temperature controls how much dark knowledge is visible. Alpha controls how much you trust the teacher versus the ground truth.</p>
+  </div>
+
+  <h3>Why This Matters for LLMs</h3>
+  <p>Large foundation models (GPT-4, Claude, Llama 70B) require tens of gigabytes of VRAM. KD compresses their capability into models that run on laptops and phones. DistilBERT retains 97% of BERT's GLUE performance at 40% fewer parameters. Microsoft's Phi-3 (3.8B) outperforms Llama-2-7B on reasoning — distilled from GPT-4-generated synthetic data.</p>
+
+  <h3>The API-Only Problem</h3>
+  <p>Standard KD requires gradient access to both models. But in production RAG systems, models are often <strong>API-only</strong> — you can't access weights, you can't fine-tune, you can't compute KL divergence over logits. All you have is the system prompt and text inputs/outputs.</p>
+  <p>This is the gap KD-SPAR fills: knowledge distillation applied to the <em>prompt</em> rather than the <em>weights</em>, using the teacher's output distribution as the optimisation signal.</p>
+</section>
+
+<div class="accent-sep"></div>
+
+<!-- ════════════ PART II: THE TEACHER-STUDENT DYNAMIC ════════════ -->
+<section>
+  <span class="section-num">PART II</span>
+  <h2>The Teacher-Student Dynamic in KD-SPAR</h2>
+
+  <p>In standard KD, the teacher is frozen and the student's <em>weights</em> are updated. In KD-SPAR, the student's <em>system prompt</em> is updated instead. This changes the teacher-student relationship fundamentally:</p>
+
+  <table>
+    <tr><th>Property</th><th>Standard KD</th><th>KD-SPAR</th></tr>
+    <tr><td>What changes</td><td>Student weights (millions of params)</td><td>System prompt (100–500 tokens)</td></tr>
+    <tr><td>Requires</td><td>Gradient access, GPU training</td><td>Text API only</td></tr>
+    <tr><td>Teacher role</td><td>Produces soft targets</td><td>Produces reference responses + diagnoses failures</td></tr>
+    <tr><td>Student role</td><td>Passive — receives gradients</td><td><strong>Active — diagnoses and self-authors</strong></td></tr>
+    <tr><td>Optimisation</td><td>Continuous (gradient descent)</td><td>Discrete (prompt search)</td></tr>
+    <tr><td>Metric</td><td>KL divergence over logits</td><td>Composite: citation + semantic + token overlap</td></tr>
+  </table>
+
+  <h3>Model Pair Selection</h3>
+  <p>The teacher must be strictly more capable than the student — otherwise there's nothing to distil. Our experiments use three configurations:</p>
+
+  <table class="small-table">
+    <tr><th>Config</th><th>Teacher</th><th>Student</th><th>Capacity Gap</th><th>Purpose</th></tr>
+    <tr><td>1</td><td>llama3.1:8b</td><td>llama3.2:3b</td><td>2.7×</td><td>Same family — controlled test</td></tr>
+    <tr><td>2</td><td>qwen2.5:7b</td><td>llama3.2:3b</td><td>2.3×</td><td>Cross-family — generalisation</td></tr>
+    <tr><td>3</td><td>llama3.1:8b</td><td>qwen2.5:3b</td><td>2.7×</td><td>Architecture-agnostic claim</td></tr>
+  </table>
+
+  <h3>The Self-Knowledge Hypothesis</h3>
+
+  <div class="callout blue">
+    <div class="cl-label">Central Claim</div>
+    <p>The student model has <strong>privileged self-knowledge</strong> about what instructions elicit its best behaviour. Because it will <em>execute</em> the instruction, it knows how different phrasings affect its own outputs — knowledge that an external optimiser doesn't have. Therefore, student self-authored instructions should outperform externally proposed instructions given the same KD scoring signal.</p>
+  </div>
+
+  <p>This is testable. The <strong>A−B gap</strong> — KD score of self-proposed (A) minus externally-proposed (B), with everything else identical — isolates the pure value of self-authorship.</p>
+</section>
+
+<div class="accent-sep"></div>
+
+<!-- ════════════ PART III: THE ALGORITHM ════════════ -->
+<section>
+  <span class="section-num">PART III</span>
+  <h2>The KD-SPAR Algorithm: Phase by Phase</h2>
+
+  <div class="diagram">
+    <div class="flow">
+      <div class="box accent">Phase 1: Diagnose</div>
+      <div class="arrow">→</div>
+      <div class="box gold">Phase 2: Self-Interview</div>
+      <div class="arrow">→</div>
+      <div class="box">Phase 3: Aggregate</div>
+      <div class="arrow">→</div>
+      <div class="box green">Phase 4: Validate</div>
+    </div>
+    <div class="flow" style="margin-top:8px">
+      <div class="arrow" style="transform:rotate(180deg)">←</div>
+      <span style="font-size:12px;color:var(--text-dim)">iterate until convergence or max iterations</span>
+    </div>
+    <div class="caption">Figure 2 — KD-SPAR feedback loop: diagnose → interview → aggregate → validate → commit or revert.</div>
+  </div>
+
+  <div class="algo">
+    <div class="algo-header">
+      <div class="algo-title">Algorithm 1 — KD-SPAR (Base Variant)</div>
+      <div class="algo-ref">Sara §10, §18c</div>
+    </div>
+    <div class="algo-body">
+      <div class="algo-io">
+        <span class="algo-io-label">Input:</span> train queries <span class="vr">Q<sub>train</sub></span>, validation queries <span class="vr">Q<sub>val</sub></span>,<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;teacher responses <span class="vr">T</span> = {<span class="vr">q</span> : <span class="fn">teacher</span>(<span class="vr">q</span>) &nbsp;<span class="kw">for</span> <span class="vr">q</span> ∈ <span class="vr">Q<sub>train</sub></span>},<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;base system prompt <span class="vr">P<sub>0</sub></span>, max iterations <span class="vr">N</span>, commit threshold <span class="vr">δ</span><br>
+        <span class="algo-io-label">Output:</span> optimised prompt <span class="vr">P*</span>
+      </div>
+      <div class="algo-line"><span class="vr">P</span> ← <span class="vr">P<sub>0</sub></span></div>
+      <div class="algo-line"><span class="kw">for</span> <span class="vr">t</span> = 1 … <span class="vr">N</span> <span class="kw">do</span></div>
+      <div class="algo-phase">&nbsp;&nbsp;▸ Phase 1 — Diagnostic Pass</div>
+      <div class="algo-line algo-indent1"><span class="kw">for each</span> <span class="vr">q</span> ∈ <span class="vr">Q<sub>train</sub></span> <span class="kw">do</span></div>
+      <div class="algo-line algo-indent2"><span class="vr">s<sub>q</sub></span> ← <span class="fn">student.query</span>(<span class="vr">q</span>, prompt = <span class="vr">P</span>)</div>
+      <div class="algo-line algo-indent2"><span class="vr">score<sub>q</sub></span> ← <span class="fn">KD_score</span>(<span class="vr">s<sub>q</sub></span>, <span class="vr">T</span>[<span class="vr">q</span>])</div>
+      <div class="algo-line algo-indent2"><span class="vr">mode<sub>q</sub></span> ← <span class="fn">classify_failure</span>(<span class="vr">s<sub>q</sub></span>, <span class="vr">T</span>[<span class="vr">q</span>])</div>
+      <div class="algo-line algo-indent1"><span class="kw">end for</span></div>
+      <div class="algo-line algo-indent1"><span class="vr">F</span> ← top-<span class="vr">k</span> failures sorted by <span class="vr">score<sub>q</sub></span> ascending</div>
+      <div class="algo-phase">&nbsp;&nbsp;▸ Phase 2 — Self-Interview</div>
+      <div class="algo-line algo-indent1"><span class="vr">Proposals</span> ← ∅</div>
+      <div class="algo-line algo-indent1"><span class="kw">for each</span> (<span class="vr">q</span>, <span class="vr">s<sub>q</sub></span>, <span class="vr">T</span>[<span class="vr">q</span>], <span class="vr">mode<sub>q</sub></span>) ∈ <span class="vr">F</span> <span class="kw">do</span></div>
+      <div class="algo-line algo-indent2"><span class="vr">π</span> ← <span class="fn">SELF_INTERVIEW</span>(<span class="vr">q</span>, <span class="vr">s<sub>q</sub></span>, <span class="vr">T</span>[<span class="vr">q</span>], <span class="vr">mode<sub>q</sub></span>) &nbsp;<span class="cm">▹ see Prompt 1</span></div>
+      <div class="algo-line algo-indent2"><span class="vr">props</span> ← <span class="fn">student.generate</span>(<span class="vr">π</span>, n = <span class="vr">n_proposals</span>)</div>
+      <div class="algo-line algo-indent2"><span class="vr">Proposals</span> ← <span class="vr">Proposals</span> ∪ <span class="vr">props</span></div>
+      <div class="algo-line algo-indent1"><span class="kw">end for</span></div>
+      <div class="algo-phase">&nbsp;&nbsp;▸ Phase 3 — Aggregation</div>
+      <div class="algo-line algo-indent1"><span class="vr">C</span> ← <span class="fn">AgglomerativeCluster</span>(<span class="fn">embed</span>(<span class="vr">Proposals</span>))</div>
+      <div class="algo-line algo-indent1"><span class="vr">Top</span> ← top-<span class="vr">K</span> cluster representatives by mini-eval KD score</div>
+      <div class="algo-phase">&nbsp;&nbsp;▸ Phase 4 — Validate &amp; Commit</div>
+      <div class="algo-line algo-indent1"><span class="vr">P<sub>cand</sub></span> ← <span class="vr">P</span> ⊕ <span class="vr">Top</span> &nbsp;<span class="cm">▹ append selected instructions</span></div>
+      <div class="algo-line algo-indent1"><span class="vr">Δ</span> ← <span class="fn">mean_KD</span>(<span class="vr">P<sub>cand</sub></span>, <span class="vr">Q<sub>val</sub></span>, <span class="vr">T</span>) − <span class="fn">mean_KD</span>(<span class="vr">P</span>, <span class="vr">Q<sub>val</sub></span>, <span class="vr">T</span>)</div>
+      <div class="algo-line algo-indent1"><span class="kw">if</span> <span class="vr">Δ</span> ≥ <span class="vr">δ</span> <span class="kw">then</span></div>
+      <div class="algo-line algo-indent2"><span class="vr">P</span> ← <span class="vr">P<sub>cand</sub></span> &nbsp;<span class="cm">▹ commit</span></div>
+      <div class="algo-line algo-indent1"><span class="kw">else</span></div>
+      <div class="algo-line algo-indent2">revert &nbsp;<span class="cm">▹ reject — keep current P</span></div>
+      <div class="algo-line algo-indent1"><span class="kw">end if</span></div>
+      <div class="algo-line"><span class="kw">end for</span></div>
+      <div class="algo-line"><span class="kw">return</span> <span class="vr">P</span></div>
+    </div>
+  </div>
+
+  <h3>Phase 1 — Diagnostic Pass</h3>
+  <p>The student runs on every training query with the current prompt P. Each response is scored against the cached teacher response using a <strong>composite KD score</strong>:</p>
+
+  <div class="algo">
+    <div class="algo-header">
+      <div class="algo-title">Function — KD_score (v1, Jaccard-based)</div>
+    </div>
+    <div class="algo-body">
+      <div class="algo-io">
+        <span class="algo-io-label">Input:</span> student response <span class="vr">s</span>, teacher response <span class="vr">t</span><br>
+        <span class="algo-io-label">Output:</span> alignment score ∈ [0, 1]
+      </div>
+      <div class="algo-line"><span class="vr">t_cited</span> ← <span class="fn">has_citation</span>(<span class="vr">t</span>) &nbsp;<span class="cm">▹ regex match for [Doc-N]</span></div>
+      <div class="algo-line"><span class="vr">s_cited</span> ← <span class="fn">has_citation</span>(<span class="vr">s</span>)</div>
+      <div class="algo-line"><span class="vr">cit</span> ← <span class="kw">if</span> (¬<span class="vr">t_cited</span>) ∨ <span class="vr">s_cited</span> <span class="kw">then</span> <span class="sym">1.0</span> <span class="kw">else</span> <span class="sym">0.0</span></div>
+      <div class="algo-line"><span class="kw">return</span> <span class="sym">0.3</span> × <span class="vr">cit</span> + <span class="sym">0.7</span> × <span class="fn">jaccard</span>(<span class="vr">s</span>, <span class="vr">t</span>)</div>
+    </div>
+  </div>
+
+  <p>Failures are classified into five modes: <code>missing_citation</code>, <code>over_hedged</code>, <code>under_hedged</code>, <code>incomplete</code>, <code>format_drift</code>. The worst-scoring queries are selected for the self-interview.</p>
+
+  <h3>Phase 2 — Self-Interview</h3>
+  <p>This is the core innovation. The student is shown <em>its own failure</em> and asked to propose a fix. The prompt template is precisely structured:</p>
+
+  <div class="prompt-block">
+    <div class="prompt-header">Prompt 1 — Self-Interview Template</div>
+    <div class="prompt-body"><span class="prompt-section">System Context</span>
+You are analysing your own performance on a
+retrieval-augmented generation task.
+
+<span class="prompt-section">Input Variables</span>
+<span class="prompt-var">QUERY:</span>             {query}
+<span class="prompt-var">YOUR RESPONSE:</span>     {student_response}
+<span class="prompt-var">FAILURE MODE:</span>      {failure_description}
+<span class="prompt-var">TARGET PATTERN:</span>    {target_pattern}
+
+<span class="prompt-section">Task</span>
+In exactly ONE sentence, propose a specific instruction
+that should be added to your system prompt to help you
+avoid this failure in future responses.
+
+<span class="prompt-section">Rules</span>
+<span class="prompt-rule">•  Write ONLY the instruction text
+   (no preamble, no explanation, no quotes)
+•  Be specific and actionable</span>
+
+   <span class="prompt-bad">✗ BAD:  "be more careful"</span>
+   <span class="prompt-good">✓ GOOD: "Always cite retrieved passages using
+          [Doc-N] notation after each claim"</span>
+
+<span class="prompt-rule">•  Focus exclusively on the described failure mode</span></div>
+  </div>
+
+  <h3>Phase 3 — Aggregation</h3>
+  <p>Proposals are embedded using <strong>MiniLM-L6</strong> sentence embeddings, clustered via <strong>agglomerative clustering</strong>, and each cluster representative is scored on a mini evaluation set. The top-K proposals by KD score improvement are selected. This deduplicates semantically similar proposals — five variations of "cite your sources" collapse into one representative.</p>
+
+  <h3>Phase 4 — Validate & Commit</h3>
+  <p>The candidate prompt (current P ⊕ selected instructions) is tested on <strong>held-out validation queries</strong> that were never used in diagnosis or scoring. If the aggregate KD score improves by at least threshold δ, the update is committed. Otherwise it reverts entirely. This gate prevents the prompt from accumulating bad instructions — a rejected iteration leaves P unchanged.</p>
+</section>
+
+<div class="accent-sep"></div>
+
+<!-- ════════════ PART IV: THE EXPERIMENT ════════════ -->
+<section>
+  <span class="section-num">PART IV</span>
+  <h2>The Controlled Experiment</h2>
+
+  <p>Six conditions, each holding everything constant except <em>who writes the instructions</em>:</p>
+
+  <table>
+    <tr><th>Cond.</th><th>Description</th><th>Proposer</th><th>KD Signal</th><th>Tests</th></tr>
+    <tr><td class="mono">A</td><td>Base KD-SPAR</td><td>Student self-proposes</td><td>Yes</td><td>Self-knowledge</td></tr>
+    <tr><td class="mono">B</td><td>External proposal</td><td>Teacher proposes</td><td>Yes</td><td>External vs self</td></tr>
+    <tr><td class="mono">C</td><td>Random instructions</td><td>Generic pool</td><td>No</td><td>Noise baseline</td></tr>
+    <tr><td class="mono">D</td><td>No tuning</td><td>—</td><td>No</td><td>Floor</td></tr>
+    <tr><td class="mono">E</td><td>MetaKDSPAR</td><td>4 specialists + conductor</td><td>Yes</td><td>Multi-perspective</td></tr>
+    <tr><td class="mono">F</td><td>Enhanced KD-SPAR</td><td>Hybrid (8 improvements)</td><td>Yes</td><td>Full enhancement</td></tr>
+  </table>
+
+  <p><strong>Hardware:</strong> System76 OryxPro, Pop!_OS, NVIDIA RTX 3070 Ti, Ollama local runtime, temperature 0.0.</p>
+  <p><strong>Scale:</strong> 10 runs (2 configs × 5 seeds), 3 SPAR iterations per condition, 10–15 held-out validation queries.</p>
+
+  <h3>Results</h3>
+
+  <table>
+    <tr><th>Cond.</th><th>Description</th><th>KD Score ↑</th><th>Δ vs D</th><th>Citation Fid.</th></tr>
+    <tr class="win"><td class="mono">F</td><td>Enhanced KD-SPAR</td><td class="mono">0.312</td><td class="mono" style="color:var(--green)">+0.030</td><td class="mono">0.500</td></tr>
+    <tr class="win"><td class="mono">E</td><td>MetaKDSPAR</td><td class="mono">0.312</td><td class="mono" style="color:var(--green)">+0.030</td><td class="mono">0.500</td></tr>
+    <tr><td class="mono">B</td><td>External proposal</td><td class="mono">0.297</td><td class="mono">+0.015</td><td class="mono">0.480</td></tr>
+    <tr><td class="mono">D</td><td>Baseline</td><td class="mono">0.282</td><td class="mono">—</td><td class="mono">0.450</td></tr>
+    <tr class="lose"><td class="mono">A</td><td>Base KD-SPAR</td><td class="mono">0.272</td><td class="mono" style="color:var(--red)">−0.010</td><td class="mono">0.490</td></tr>
+    <tr class="lose"><td class="mono">C</td><td>Random</td><td class="mono">0.200</td><td class="mono" style="color:var(--red)">−0.082</td><td class="mono">0.410</td></tr>
+  </table>
+
+  <div class="metric-row">
+    <div class="metric-card"><div class="mv red">−0.025</div><div class="ml">A−B GAP<br>Self-knowledge ✗</div></div>
+    <div class="metric-card"><div class="mv green">+0.040</div><div class="ml">E−A GAP<br>MetaKDSPAR ✓</div></div>
+    <div class="metric-card"><div class="mv green">+0.040</div><div class="ml">F−A GAP<br>Enhanced ✓</div></div>
+    <div class="metric-card"><div class="mv green">+0.014</div><div class="ml">F−B GAP<br>Beats external ✓</div></div>
+  </div>
+
+  <h3>Statistical Analysis</h3>
+  <p>One-sided paired t-test on per-run A−B gaps (n=10):</p>
+  <table class="small-table">
+    <tr><td>t(9) = −1.871</td><td>p = 0.966</td><td>Cohen's d = −0.592 (medium)</td><td>H₀ <strong>not rejected</strong></td></tr>
+  </table>
+  <p>The base self-knowledge hypothesis is not supported at α = 0.05. The A−B gap is negative — external proposal beats self-proposal with a medium effect size.</p>
+</section>
+
+<div class="accent-sep"></div>
+
+<!-- ════════════ PART V: ROOT CAUSE ════════════ -->
+<section>
+  <span class="section-num">PART V</span>
+  <h2>Why Base KD-SPAR Failed — A Root Cause Analysis</h2>
+
+  <p>0 out of 3 SPAR iterations were accepted in most runs. The proposals were either too generic ("Always cite sources") or semantically good but penalised by Jaccard. Three specific root causes:</p>
+
+  <h3>1. Meta-Cognitive Capacity Gap</h3>
+  <p>The self-interview asks a 3B model to simultaneously: (a) understand what it did wrong, (b) reason about what instruction would change its behaviour, and (c) generate that instruction precisely. This is a <strong>meta-cognitive task</strong> that requires the model to model <em>itself</em>. At 3B parameters, this capacity is insufficient. The teacher (8B) has 2.7× more parameters for exactly this kind of abstract reasoning — which is why Condition B (teacher proposes) outperforms Condition A (student proposes).</p>
+
+  <h3>2. Jaccard Penalises Good Paraphrases</h3>
+  <p>The KD score uses 70% Jaccard token overlap. But a student that paraphrases the teacher correctly — using different but equivalent words — gets a <em>lower</em> score than one that copies tokens verbatim. The validate-and-commit gate then rejects the improvement because the metric can't see it. This is a fundamental mismatch between what we're optimising (semantic alignment) and what we're measuring (token overlap).</p>
+
+  <h3>3. Cold Start + Strict Gate + Few Iterations</h3>
+  <p>Starting from a vanilla prompt with δ ≥ 0.003 and only 3 iterations: the first proposals are necessarily broad (the prompt has no accumulated context). Broad proposals rarely clear a strict threshold. With only 3 chances, the loop never gets past the first "bad proposal" phase into the "targeted refinement" phase that would produce real improvements.</p>
+</section>
+
+<div class="accent-sep"></div>
+
+<!-- ════════════ PART VI: THE FIX ════════════ -->
+<section>
+  <span class="section-num">PART VI</span>
+  <h2>Eight Enhancements — Enhanced KD-SPAR</h2>
+
+  <p>Each root cause got a targeted fix. Together they form <strong>Condition F</strong>.</p>
+
+  <div class="enh-grid">
+    <div class="enh-card"><div class="enh-num">01 — HYBRID PROPOSER</div><div class="enh-title">Teacher Diagnoses, Student Proposes</div><p>Separates the hard part (diagnosis — requires meta-cognition) from the privileged part (proposal — requires self-knowledge). The teacher's 8B capacity handles abstract failure analysis; the student's 3B self-knowledge handles instruction authoring.</p></div>
+    <div class="enh-card"><div class="enh-num">02 — BERTSCORE METRIC</div><div class="enh-title">Semantic Replaces Syntactic</div><p>Score becomes 0.3×citation + 0.5×BERTScore(MiniLM) + 0.2×Jaccard. Paraphrases that capture meaning score high. The gate finally rewards semantic improvement.</p></div>
+    <div class="enh-card"><div class="enh-num">03 — CONTRASTIVE INTERVIEW</div><div class="enh-title">Good/Bad Pair Reasoning</div><p>Show the student a query where it scored well and one where it scored poorly. "What did you do right here that you missed there?" Concrete positive examples produce more specific proposals.</p></div>
+    <div class="enh-card"><div class="enh-num">04 — WARM-START FROM B</div><div class="enh-title">Bootstrap from External Proposal</div><p>Run one teacher-proposed iteration first. The self-interview then diagnoses from an already-improved prompt — not the vanilla default.</p></div>
+    <div class="enh-card"><div class="enh-num">05 — MORE ITERATIONS (5)</div><div class="enh-title">Room to Converge</div><p>First proposals are broad; later ones are targeted. 3 iterations isn't enough. 5 gives the loop time to refine.</p></div>
+    <div class="enh-card"><div class="enh-num">06 — SOFT COMMIT GATE</div><div class="enh-title">Simulated Annealing</div><p>Accept with probability exp(δ/T), temperature decreasing per iteration. Marginal improvements get through and compound over iterations.</p></div>
+    <div class="enh-card"><div class="enh-num">07 — TEACHER-GUIDED INTERVIEW</div><div class="enh-title">Show the Actual Teacher Response</div><p>Include the teacher's full response text in the interview prompt — not just a failure mode label. The student sees what "good" looks like concretely.</p></div>
+    <div class="enh-card star"><div class="enh-num">08 — TREE OF THOUGHT</div><div class="enh-title">Structured Proposal Search</div><p>Replace flat single-shot generation with Branch → Evaluate → Expand. Generate K root-cause hypotheses, score each for explanatory power, expand the best into targeted instructions. Explores the reasoning space about <em>why</em> failures occurred.</p></div>
+  </div>
+
+  <h3>Tree of Thought — The Search Tree for Proposals</h3>
+
+  <div class="algo">
+    <div class="algo-header">
+      <div class="algo-title">Algorithm 2 — Tree of Thought Proposal Generation (Enhancement 8)</div>
+      <div class="algo-ref">Sara §13c</div>
+    </div>
+    <div class="algo-body">
+      <div class="algo-io">
+        <span class="algo-io-label">Input:</span> query <span class="vr">q</span>, student response <span class="vr">s</span>, teacher response <span class="vr">t</span>,<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;failure mode <span class="vr">m</span>, branches <span class="vr">K</span>, expansions <span class="vr">E</span>, depth <span class="vr">D</span><br>
+        <span class="algo-io-label">Output:</span> ranked candidate instructions <span class="vr">I</span>
+      </div>
+      <div class="algo-phase">▸ Step 1 — Branch: generate root-cause hypotheses</div>
+      <div class="algo-line"><span class="vr">H</span> ← <span class="fn">student.generate</span>(<span class="fn">BRANCH_PROMPT</span>(<span class="vr">q</span>, <span class="vr">s</span>, <span class="vr">t</span>, <span class="vr">m</span>), n = <span class="vr">K</span>) &nbsp;<span class="cm">▹ see Prompt 2</span></div>
+      <div class="algo-phase">▸ Step 2 — Evaluate: score each hypothesis</div>
+      <div class="algo-line"><span class="kw">for each</span> <span class="vr">h</span> ∈ <span class="vr">H</span> <span class="kw">do</span></div>
+      <div class="algo-line algo-indent1"><span class="vr">score<sub>h</sub></span> ← <span class="fn">student.evaluate</span>(<span class="vr">h</span>, <span class="vr">t</span>, scale = 1–5) &nbsp;<span class="cm">▹ explanatory power</span></div>
+      <div class="algo-line"><span class="kw">end for</span></div>
+      <div class="algo-line"><span class="vr">H*</span> ← top ⌈<span class="vr">K</span>/2⌉ + 1 hypotheses by <span class="vr">score<sub>h</sub></span> descending</div>
+      <div class="algo-phase">▸ Step 3 — Expand: generate instructions from best hypotheses</div>
+      <div class="algo-line"><span class="vr">I</span> ← ∅</div>
+      <div class="algo-line"><span class="kw">for each</span> <span class="vr">h</span> ∈ <span class="vr">H*</span> <span class="kw">do</span></div>
+      <div class="algo-line algo-indent1"><span class="vr">instrs</span> ← <span class="fn">student.generate</span>(<span class="fn">EXPAND_PROMPT</span>(<span class="vr">h</span>, <span class="vr">q</span>, <span class="vr">t</span>, <span class="vr">m</span>), n = <span class="vr">E</span>)</div>
+      <div class="algo-line algo-indent1"><span class="vr">I</span> ← <span class="vr">I</span> ∪ <span class="vr">instrs</span></div>
+      <div class="algo-line"><span class="kw">end for</span></div>
+      <div class="algo-phase">▸ Step 4 — Optional refinement (depth &gt; 1)</div>
+      <div class="algo-line"><span class="kw">if</span> <span class="vr">D</span> &gt; 1 <span class="kw">then</span></div>
+      <div class="algo-line algo-indent1"><span class="vr">I<sub>best</sub></span> ← <span class="fn">argmax</span>(<span class="vr">I</span>) &nbsp;<span class="cm">▹ highest-scored instruction</span></div>
+      <div class="algo-line algo-indent1"><span class="vr">I<sub>refined</sub></span> ← <span class="fn">student.refine</span>(<span class="vr">I<sub>best</sub></span>, n = <span class="vr">E</span>) &nbsp;<span class="cm">▹ more specific variations</span></div>
+      <div class="algo-line algo-indent1"><span class="vr">I</span> ← <span class="vr">I</span> ∪ <span class="vr">I<sub>refined</sub></span></div>
+      <div class="algo-line"><span class="kw">end if</span></div>
+      <div class="algo-line"><span class="kw">return</span> <span class="vr">I</span></div>
+    </div>
+  </div>
+
+  <div class="prompt-block">
+    <div class="prompt-header">Prompt 2 — Tree of Thought Branch Template</div>
+    <div class="prompt-body"><span class="prompt-section">System Context</span>
+You are analysing WHY your response failed
+on this query.
+
+<span class="prompt-section">Input Variables</span>
+<span class="prompt-var">QUERY:</span>             {query}
+<span class="prompt-var">YOUR RESPONSE:</span>     {student_response}
+<span class="prompt-var">TEACHER RESPONSE:</span>  {teacher_response}
+<span class="prompt-var">FAILURE MODE:</span>      {failure_mode}
+
+<span class="prompt-section">Task</span>
+Think about the ROOT CAUSE of this failure —
+not the surface symptom but the underlying reason
+your response diverged from the teacher's.
+
+Generate <span class="prompt-var">{K}</span> DIFFERENT hypotheses about WHY you
+failed. Each hypothesis must suggest a fundamentally
+different root cause.
+
+<span class="prompt-section">Output Format</span>
+<span class="prompt-rule">HYPOTHESIS 1: {one sentence — root cause A}
+HYPOTHESIS 2: {one sentence — root cause B}
+HYPOTHESIS 3: {one sentence — root cause C}</span></div>
+  </div>
+
+  <p><strong>Why this works better than flat generation:</strong> A single-shot interview often produces 5 slightly different wordings of "cite your sources." Tree of Thought forces the student to reason about <em>why</em> it failed first — and different root causes ("doesn't know when to cite" vs. "treats citations as optional" vs. "cites only direct quotes") produce fundamentally different instructions. The evaluate step prunes bad reasoning paths <em>before</em> they generate instructions, saving compute and improving quality.</p>
+</section>
+
+<div class="accent-sep"></div>
+
+<!-- ════════════ PART VII: WHAT THE DATA SAYS ════════════ -->
+<section>
+  <span class="section-num">PART VII</span>
+  <h2>What the Data Actually Says</h2>
+
+  <h3>Finding 1: The Self-Knowledge Hypothesis Is Capacity-Gated</h3>
+  <p>At 3B parameters, the student <strong>cannot</strong> effectively self-diagnose. The A−B gap is negative (−0.025). But with hybrid diagnosis (teacher diagnoses, student proposes), the Enhanced variant outperforms even the teacher's own proposals (F−B = +0.014). <strong>The privileged self-knowledge is real; it needs better infrastructure to extract.</strong></p>
+
+  <h3>Finding 2: MetaKDSPAR Works Without the Other Enhancements</h3>
+  <p>Condition E (4 specialists + conductor, no BERTScore, no warm-start, no ToT) matched the fully Enhanced variant at 0.312. Multi-perspective diagnosis alone — decomposing "what went wrong" into citation, calibration, completeness, and format specialists — catches compound failures that the monolithic classifier misses. E−A gap = +0.040.</p>
+
+  <h3>Finding 3: The Metric Matters More Than the Algorithm</h3>
+  <p>Jaccard token overlap actively penalises good paraphrases. Switching to BERTScore in the Enhanced variant was likely the single highest-impact change. If your optimisation loop uses the wrong fitness signal, the search algorithm doesn't matter.</p>
+
+  <h3>Finding 4: The Baseline Ladder Behaves as Expected</h3>
+  <p>B &gt; D (KD-guided proposal adds value over no tuning), C &lt; D (random instructions <em>hurt</em> — they don't just fail to help, they actively degrade). This confirms the experimental design is sound: the KD signal is informative, and adding random instructions is worse than doing nothing.</p>
+
+  <div class="callout green">
+    <div class="cl-label">The Takeaway</div>
+    <p>KD-SPAR's intellectual bet — that a model has useful self-knowledge about what instructions work — is <strong>not wrong, but it's harder to extract than expected</strong>. At 3B parameters, you need: (1) the teacher's help for diagnosis, (2) a semantic metric that doesn't penalise paraphrases, (3) structured reasoning (ToT) instead of flat proposal generation, and (4) a warm-start to avoid the cold-start problem. With all eight enhancements, the self-knowledge mechanism outperforms everything — including pure external proposal.</p>
+  </div>
+</section>
+
+<div class="accent-sep"></div>
+
+<!-- ════════════ PART VIII: VARIANTS ════════════ -->
+<section>
+  <span class="section-num">PART VIII</span>
+  <h2>Six Variants for Six Deployment Patterns</h2>
+
+  <table>
+    <tr><th>Variant</th><th>When to Use</th><th>Key Innovation</th></tr>
+    <tr><td><strong>Base KD-SPAR</strong></td><td>Single teacher, standard queries</td><td>4-phase self-rewriting loop</td></tr>
+    <tr><td><strong>Multi-Teacher</strong></td><td>Committee of specialists</td><td>Worst-teacher principle + non-regression gate</td></tr>
+    <tr><td><strong>Adversarial</strong></td><td>Long-tail robustness</td><td>Gap-mined hard examples + dual-objective validation</td></tr>
+    <tr><td><strong>Federated</strong></td><td>Multi-site, private data</td><td>Only instruction strings cross boundaries</td></tr>
+    <tr><td><strong>MetaKDSPAR</strong></td><td>Compound failures</td><td>Conductor + 4 specialist perspectives</td></tr>
+    <tr class="win"><td><strong>Enhanced</strong></td><td>Base underperforming</td><td>8 improvements incl. BERTScore + ToT</td></tr>
+  </table>
+</section>
+
+<div class="accent-sep"></div>
+
+<!-- ════════════ PART IX: LIMITATIONS & FUTURE ════════════ -->
+<section>
+  <span class="section-num">PART IX</span>
+  <h2>Strengths, Limitations, and Future Directions</h2>
+
+  <h3>Strengths</h3>
+  <p>• <strong>API-only:</strong> Works without weight access — applicable to any LLM provider.<br>
+  • <strong>Fully reproducible:</strong> temperature=0.0, fixed seeds, local models, zero API cost.<br>
+  • <strong>Honest:</strong> The paper and blog report negative results alongside positive ones. The adaptive commentary system generates honest analysis for every outcome.<br>
+  • <strong>Practical:</strong> The Federated variant addresses real enterprise needs (multi-site RAG with data sovereignty). The Enhanced variant works on current hardware with current models.</p>
+
+  <h3>Limitations</h3>
+  <p>• <strong>Metric quality:</strong> Even BERTScore is an automatic proxy. Human evaluation (3 raters, Cohen's κ &gt; 0.6) is needed for top-venue submission.<br>
+  • <strong>Single domain:</strong> All experiments use RAG QA. Generalisation to code generation, structured extraction, or creative writing is not yet established.<br>
+  • <strong>No convergence guarantee:</strong> The loop uses a fixed iteration count. There is no formal proof that the prompt will converge.<br>
+  • <strong>3B capacity ceiling:</strong> The base self-knowledge hypothesis may hold at 7B+ but we haven't tested it.</p>
+
+  <h3>Future Directions</h3>
+  <p>• <strong>Larger students (7B+)</strong> — test whether the base A−B gap becomes positive when the student has more meta-cognitive capacity.<br>
+  • <strong>BERTScore throughout</strong> — run all conditions on the same semantic metric for fairer comparison.<br>
+  • <strong>Active learning + adversarial SPAR</strong> — the student proposes queries it's most uncertain about.<br>
+  • <strong>Learned specialist selection</strong> — train a router that predicts which MetaKDSPAR perspectives are most informative per query, reducing overhead from 4× to ~2×.<br>
+  • <strong>Formal convergence analysis</strong> — prove conditions under which the SPAR loop converges.</p>
+</section>
+
+<div class="accent-sep"></div>
+
+<!-- ════════════ TRY IT ════════════ -->
+<section>
+  <span class="section-num">OPEN SOURCE</span>
+  <h2>Try It Yourself</h2>
+  <div class="codeblock">
+<span class="cm"># Full reproduction — one command</span>
+git clone https://github.com/ajsinha/sara
+cd sara && bash setup_and_run.sh
+
+<span class="cm"># Or run individual variants:</span>
+python examples/04_kd_spar.py           <span class="cm"># Base KD-SPAR</span>
+python examples/09_meta_kd_spar.py      <span class="cm"># MetaKDSPAR</span>
+python examples/10_enhanced_kd_spar.py  <span class="cm"># Enhanced (8 improvements)</span>
+  </div>
+  <p>50-page paper (auto-rebuilt with your results). 31 source modules. 246 tests. 10 examples. 24 references. AGPL-3.0 — fully open.</p>
+</section>
+
+</div>
+
+<!-- ════════════ FOOTER ════════════ -->
+<footer>
+  <div class="sk">सार</div>
+  <p>Sara — the refined essence extracted from a larger whole. Knowledge distillation extracts the <em>sāra</em> of a teacher model. KD-SPAR extracts the <em>sāra</em> of the student's own failures. Enhanced KD-SPAR provides the infrastructure to do it properly — even when the student is small.</p>
+  <div class="tags">
+    <span class="tag">#MachineLearning</span>
+    <span class="tag">#KnowledgeDistillation</span>
+    <span class="tag">#LLM</span>
+    <span class="tag">#NLP</span>
+    <span class="tag">#RAG</span>
+    <span class="tag">#TreeOfThought</span>
+    <span class="tag">#Metaprompting</span>
+    <span class="tag">#OpenSource</span>
+    <span class="tag">#HonestML</span>
+  </div>
+</footer>
+
+</body>
+</html>

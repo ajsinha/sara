@@ -1,7 +1,7 @@
 # Copyright (C) 2025 Ashutosh Sinha (ajsinha@gmail.com)
-# Sara (सार) — Knowledge Distillation and KD-SPAR Toolkit  v1.6.0
+# Sara (सार) — Knowledge Distillation and KD-SPAR Toolkit  v1.7.0
 # SPDX-License-Identifier: AGPL-3.0-or-later
-# https://github.com/ashutosh-sinha/sara
+# https://github.com/ajsinha/sara
 from __future__ import annotations
 """
 sara.rag.kd_spar_adversarial
@@ -528,3 +528,190 @@ class AdversarialKDSPAR(KDSPAR):
             pipeline.client.update_system(orig)
         scored.sort(key=lambda x: x[1], reverse=True)
         return [p for p, _ in scored[:top_k]]
+
+    # ── Active Learning Extension (Item 6) ─────────────────────────────────
+
+    def uncertainty_sample(
+        self,
+        candidate_queries: list[str],
+        pipeline: RAGPipeline,
+        teacher_responses: dict[str, str],
+        n_samples: int = 3,
+        top_k: int = 10,
+    ) -> list[dict]:
+        """
+        Select queries where the student is most uncertain.
+
+        For each candidate query, generates n_samples responses at elevated
+        temperature and measures variance in KD scores. High variance =
+        high uncertainty = most informative for the next SPAR iteration.
+
+        Parameters
+        ----------
+        candidate_queries : pool of queries to evaluate
+        pipeline          : student pipeline (temperature will be temporarily raised)
+        teacher_responses : cached teacher responses for scoring
+        n_samples         : responses per query for variance estimation
+        top_k             : number of most-uncertain queries to return
+
+        Returns
+        -------
+        List of dicts with query, mean_score, score_std, scores
+        """
+        orig_temp = getattr(pipeline, 'temperature', 0.1)
+        # Temporarily raise temperature for diversity
+        if hasattr(pipeline, 'client') and hasattr(pipeline.client, 'temperature'):
+            pipeline.client.temperature = 0.7
+
+        results = []
+        for q in candidate_queries:
+            if q not in teacher_responses:
+                continue
+            t_resp = teacher_responses[q]
+            scores = []
+            for _ in range(n_samples):
+                try:
+                    s_resp = pipeline.query(q, return_context=False).answer
+                    scores.append(_kd_score(s_resp, t_resp))
+                except Exception:
+                    pass
+            if len(scores) >= 2:
+                mean_sc = sum(scores) / len(scores)
+                variance = sum((s - mean_sc)**2 for s in scores) / (len(scores) - 1)
+                results.append({
+                    "query": q,
+                    "mean_score": round(mean_sc, 4),
+                    "score_std": round(variance**0.5, 4),
+                    "scores": scores,
+                    "uncertainty": round(variance**0.5 + (1.0 - mean_sc), 4),  # std + gap
+                })
+
+        # Restore temperature
+        if hasattr(pipeline, 'client') and hasattr(pipeline.client, 'temperature'):
+            pipeline.client.temperature = orig_temp
+
+        # Sort by uncertainty (high variance + low mean = most informative)
+        results.sort(key=lambda x: x["uncertainty"], reverse=True)
+        selected = results[:top_k]
+
+        if selected:
+            print(f"  [active] Selected {len(selected)} uncertain queries "
+                  f"(top uncertainty: {selected[0]['uncertainty']:.3f})")
+
+        return selected
+
+    def run_active_learning(
+        self,
+        query_pool: list[str],
+        teacher_responses: dict[str, str],
+        standard_queries: list[str],
+        iterations: int = 5,
+        active_top_k: int = 8,
+        n_uncertainty_samples: int = 3,
+        threshold: float = 0.005,
+        regression_tol: float = 0.02,
+    ) -> tuple[str, list]:
+        """
+        Active learning loop: uncertainty-sample → diagnose → interview → validate.
+
+        Each iteration:
+        1. Uncertainty-sample from the query pool to find the most informative queries
+        2. Run adversarial diagnosis + interview on the selected queries
+        3. Validate with dual-objective gate (adversarial ↑ AND standard ≥ −tol)
+
+        Parameters
+        ----------
+        query_pool        : large pool of candidate queries
+        teacher_responses : cached teacher responses
+        standard_queries  : held-out standard queries for regression testing
+        iterations        : number of active learning rounds
+        active_top_k      : queries selected per round
+        """
+        from sara.core.utils import DEFAULT_SYSTEM_PROMPT
+
+        current = DEFAULT_SYSTEM_PROMPT
+        history = []
+        pipeline = RAGPipeline(
+            model_id=self.student_model,
+            store=self.store,
+            system_prompt=current,
+        )
+
+        for it in range(1, iterations + 1):
+            print(f"\n--- Active Learning Iteration {it}/{iterations} ---")
+
+            # Step 1: Uncertainty sampling
+            uncertain = self.uncertainty_sample(
+                query_pool, pipeline, teacher_responses,
+                n_samples=n_uncertainty_samples, top_k=active_top_k,
+            )
+            if not uncertain:
+                print("  No uncertain queries — converged.")
+                break
+
+            active_queries = [u["query"] for u in uncertain]
+            print(f"  Active queries: {len(active_queries)}")
+
+            # Step 2: Adversarial diagnosis on selected queries
+            proposals = []
+            for q in active_queries[:6]:
+                if q not in teacher_responses:
+                    continue
+                try:
+                    s_resp = pipeline.query(q, return_context=False).answer
+                    t_resp = teacher_responses[q]
+                    diag = self._diagnose_adversarial(q, s_resp, t_resp)
+                    props = self._self_interview_adversarial(
+                        q, s_resp, t_resp, diag, teacher_responses
+                    )
+                    proposals.extend(props)
+                except Exception as exc:
+                    print(f"  [active] error: {exc}")
+
+            if not proposals:
+                print("  No proposals — stopping.")
+                break
+
+            # Step 3: Select top instructions
+            unique = list({p for p in proposals if len(p) > 15})[:3]
+
+            # Step 4: Dual-objective validation
+            old_adv = self._batch_kd(active_queries, teacher_responses, pipeline)
+            old_std = self._batch_kd(standard_queries, teacher_responses, pipeline)
+
+            candidate = (
+                current + f"\n\n# Active learning round {it}:\n"
+                + "\n".join(f"- {ins}" for ins in unique)
+            )
+            pipeline.client.update_system(candidate)
+
+            new_adv = self._batch_kd(active_queries, teacher_responses, pipeline)
+            new_std = self._batch_kd(standard_queries, teacher_responses, pipeline)
+
+            adv_delta = new_adv - old_adv
+            std_delta = new_std - old_std
+            accepted = adv_delta >= threshold and std_delta >= -regression_tol
+
+            if not accepted:
+                pipeline.client.update_system(current)
+
+            step = {
+                "iteration": it,
+                "n_active_queries": len(active_queries),
+                "n_proposals": len(unique),
+                "adv_delta": round(adv_delta, 4),
+                "std_delta": round(std_delta, 4),
+                "accepted": accepted,
+            }
+            history.append(step)
+
+            status = "✓ ACCEPTED" if accepted else "✗ REVERTED"
+            print(f"  {status}  adv: {old_adv:.4f}→{new_adv:.4f} (Δ={adv_delta:+.4f})  "
+                  f"std: {old_std:.4f}→{new_std:.4f} (Δ={std_delta:+.4f})")
+
+            if accepted:
+                current = candidate
+
+        accepted_count = sum(1 for s in history if s["accepted"])
+        print(f"\nActive learning complete: {accepted_count}/{len(history)} rounds accepted")
+        return current, history

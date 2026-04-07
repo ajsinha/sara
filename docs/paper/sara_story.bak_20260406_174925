@@ -1,7 +1,7 @@
 # Copyright (C) 2025 Ashutosh Sinha (ajsinha@gmail.com)
-# Sara (सार) — Knowledge Distillation and KD-SPAR Toolkit  v1.6.0
+# Sara (सार) — Knowledge Distillation and KD-SPAR Toolkit  v1.7.0
 # SPDX-License-Identifier: AGPL-3.0-or-later
-# https://github.com/ashutosh-sinha/sara
+# https://github.com/ajsinha/sara
 from pathlib import Path
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -169,10 +169,59 @@ story += code_block([
     "                     F.softmax(t_logits /self.T,-1)) * self.T**2",
     "        return self.alpha*kd + (1-self.alpha)*self.ce(s_logits, labels)",
 ])
-story += h2("2.3  Why T² Scaling?")
+
+story += h2("2.3  Term-by-Term Explanation of the Distillation Loss")
 story += body(
-    "Temperature-softened gradients are T² times smaller than their hard-label counterparts. "
-    "The T² factor in the KL term restores gradient magnitude so both loss components "
+    "The combined distillation loss has the form:")
+story += body(
+    "<b>Loss = \\u03b1 \\u00b7 T\\u00b2 \\u00b7 KL(student_soft \\u2016 teacher_soft) "
+    "+ (1\\u2212\\u03b1) \\u00b7 CE(student, hard_labels)</b>")
+story += body(
+    "Each term plays a specific role:")
+story += blist([
+    "<b>\\u03b1 (alpha)</b> \\u2014 the <i>mixing coefficient</i>, a scalar in [0, 1] that "
+    "controls the balance between the two loss terms. \\u03b1 = 1 means the student learns "
+    "entirely from the teacher's soft targets; \\u03b1 = 0 means it ignores the teacher and "
+    "trains on hard labels alone. Typical values: 0.4\\u20130.7. Higher \\u03b1 is used when "
+    "the teacher is strong and the dataset is small (lean more on the teacher's knowledge).",
+    "<b>T (temperature)</b> \\u2014 a scalar > 0 that <i>softens</i> the probability "
+    "distributions. At T=1, softmax produces sharp, peaked distributions. At T=4, the "
+    "distribution is flattened, revealing inter-class similarities (\\u2018dark knowledge\\u2019). "
+    "Both teacher and student logits are divided by T before softmax. Typical values: "
+    "2\\u20138 for vision, 4\\u201316 for NLP.",
+    "<b>T\\u00b2 (temperature-squared scaling)</b> \\u2014 a correction factor that "
+    "restores gradient magnitude. When you soften the distribution by dividing logits by T, "
+    "the resulting gradients are T\\u00b2 times smaller than at T=1. Without this factor, "
+    "the KL term would become negligible at high temperatures, and the hard-label CE term "
+    "would dominate regardless of \\u03b1. Multiplying by T\\u00b2 ensures both loss "
+    "components remain on a comparable scale at any temperature.",
+    "<b>KL(student_soft \\u2016 teacher_soft)</b> \\u2014 the <i>Kullback-Leibler divergence</i> "
+    "between the student's softened output distribution and the teacher's softened output "
+    "distribution. This measures how different the student's predictions are from the "
+    "teacher's, including the rich inter-class structure in the soft targets. "
+    "KL = 0 means the distributions are identical. This is the <i>distillation term</i> "
+    "\\u2014 it transfers the teacher's dark knowledge to the student.",
+    "<b>CE(student, hard_labels)</b> \\u2014 the standard <i>cross-entropy loss</i> between "
+    "the student's predictions (at T=1, not softened) and the ground-truth one-hot labels. "
+    "This is the <i>task term</i> \\u2014 it ensures the student still learns the correct "
+    "answers, not just how to mimic the teacher. Without this term, the student could learn "
+    "to reproduce the teacher's mistakes.",
+    "<b>(1\\u2212\\u03b1)</b> \\u2014 the weight on the hard-label term. As \\u03b1 increases, "
+    "more weight goes to the teacher's soft targets and less to the ground-truth labels. "
+    "The two weights (\\u03b1 and 1\\u2212\\u03b1) always sum to 1, ensuring the total loss "
+    "magnitude stays controlled.",
+])
+story += body(
+    "<b>Intuition:</b> The first term says \\u201cmake your output distribution look like "
+    "the teacher's\\u201d (including all the nuanced inter-class similarity). The second "
+    "term says \\u201cbut also get the right answer.\\u201d The temperature controls how "
+    "much dark knowledge is visible, and alpha controls how much you trust the teacher "
+    "versus the ground truth.")
+
+story += h2("2.4  Why T\\u00b2 Scaling?")
+story += body(
+    "Temperature-softened gradients are T\\u00b2 times smaller than their hard-label counterparts. "
+    "The T\\u00b2 factor in the KL term restores gradient magnitude so both loss components "
     "remain on a comparable scale at any T.")
 story += pgbrk()
 
@@ -1104,62 +1153,74 @@ story += h1("18c. Algorithm: KD-SPAR Formal Specification")
 story += body(
     "The following pseudocode gives a formal specification of the base KD-SPAR "
     "algorithm. The three variants (Multi-Teacher, Adversarial, Federated) "
-    "modify only the shaded phases indicated.")
+    "modify only the indicated phases.")
 
 _Salgo = ParagraphStyle("algo", fontName=_MONO_FONT, fontSize=8.5, leading=13,
                         textColor=CHARCOAL, backColor=HexColor("#F5F5F5"),
-                        leftIndent=12, spaceAfter=2)
+                        leftIndent=12, spaceAfter=1, spaceBefore=0)
 _Salgob = ParagraphStyle("algob", fontName=_MONO_FONT_BOLD, fontSize=8.5, leading=13,
                          textColor=CRIMSON_DARK, backColor=HexColor("#F5F5F5"),
-                         leftIndent=12, spaceAfter=2)
+                         leftIndent=12, spaceAfter=1, spaceBefore=0)
 _Salgohead = ParagraphStyle("algoh", fontName=_BODY_FONT_BOLD, fontSize=9,
                              textColor=white, backColor=CRIMSON, spaceAfter=0,
                              spaceBefore=8, leftIndent=6)
+_Salgophase = ParagraphStyle("algop", fontName=_BODY_FONT_ITAL if os.path.exists(_FREE_SERIF_I_PATH) else "Times-Italic",
+                              fontSize=8.5, leading=13,
+                              textColor=CRIMSON, backColor=HexColor("#F0F0F0"),
+                              leftIndent=12, spaceAfter=1, spaceBefore=4)
 
-def algo_line(text, bold=False):
+def algo_line(text, bold=False, phase=False):
+    if phase:
+        return Paragraph(text.replace(" ","&nbsp;"), _Salgophase)
     style = _Salgob if bold else _Salgo
     return Paragraph(text.replace(" ","&nbsp;").replace("<","&lt;").replace(">","&gt;"), style)
 
 algo_block = [
     Spacer(1,6),
-    Paragraph("Algorithm 1 — KD-SPAR (Sara Base Variant)", _Salgohead),
+    Paragraph("Algorithm 1 \u2014 KD-SPAR (Sara Base Variant)", _Salgohead),
 ]
 algo_lines = [
-    ("Input:  train_queries Q_train, val_queries Q_val",                False),
-    ("        teacher_responses T = {q: teacher(q) for q ∈ Q_train}",   False),
-    ("        base_system_prompt P₀, iterations N, threshold δ",         False),
-    ("Output: optimised prompt P*",                                       False),
-    ("",                                                                  False),
-    ("P ← P₀",                                                           False),
-    ("for t = 1 … N do:",                                                 True),
-    ("  ── Phase 1: Diagnostic Pass ──────────────────────────────",      False),
-    ("  for q ∈ Q_train do:",                                             False),
-    ("    s_q ← student.query(q, prompt=P)",                              False),
-    ("    score_q ← KD_score(s_q, T[q])",                                False),
-    ("    mode_q  ← classify_failure(s_q, T[q])",                        False),
-    ("  F ← top-k failures sorted by score_q ascending",                 False),
-    ("",                                                                  False),
-    ("  ── Phase 2: Self-Interview ────────────────────────────────",      False),
-    ("  Proposals ← []",                                                  False),
-    ("  for (q, s_q, T[q], mode_q) ∈ F do:",                             False),
-    ("    prompt_meta ← SELF_INTERVIEW_TEMPLATE(q, s_q, T[q], mode_q)",  False),
-    ("    proposals ← student.generate(prompt_meta, n=n_proposals)",     False),
-    ("    Proposals ← Proposals ∪ proposals",                             False),
-    ("",                                                                  False),
-    ("  ── Phase 3: Aggregation ──────────────────────────────────",       False),
-    ("  Clusters ← AgglomerativeCluster(embed(Proposals))",               False),
-    ("  Top ← top-K cluster representatives by mini-eval KD score",      False),
-    ("",                                                                  False),
-    ("  ── Phase 4: Validate & Commit ─────────────────────────────",     False),
-    ("  P_candidate ← P + Top",                                           False),
-    ("  Δ ← mean_KD(P_candidate, Q_val, T) − mean_KD(P, Q_val, T)",     False),
-    ("  if Δ ≥ δ then:  P ← P_candidate   ▷ commit",                    True),
-    ("  else:            revert            ▷ reject",                     False),
-    ("",                                                                  False),
-    ("return P",                                                           True),
+    ("Input:  train queries Q_train, val queries Q_val",                 True, False),
+    ("        teacher responses T = {q: teacher(q) for q \u2208 Q_train}", False, False),
+    ("        base system prompt P0, max iterations N, threshold \u03b4", False, False),
+    ("Output: optimised prompt P*",                                       True, False),
+    ("",                                                                  False, False),
+    (" 1  P \u2190 P0",                                                    False, False),
+    (" 2  for t = 1 \u2026 N do",                                         True, False),
+    ("",                                                                  False, False),
+    ("\u25b8 Phase 1 \u2014 Diagnostic Pass",                              False, True),
+    (" 3    for each q \u2208 Q_train do",                                 False, False),
+    (" 4      s_q \u2190 student.query(q, prompt = P)",                    False, False),
+    (" 5      score_q \u2190 KD_score(s_q, T[q])",                        False, False),
+    (" 6      mode_q \u2190 classify_failure(s_q, T[q])",                 False, False),
+    (" 7    end for",                                                      True, False),
+    (" 8    F \u2190 top-k failures sorted by score_q ascending",          False, False),
+    ("",                                                                  False, False),
+    ("\u25b8 Phase 2 \u2014 Self-Interview",                               False, True),
+    (" 9    Proposals \u2190 \u2205",                                       False, False),
+    ("10    for each (q, s_q, T[q], mode_q) \u2208 F do",                  False, False),
+    ("11      \u03c0 \u2190 SELF_INTERVIEW(q, s_q, T[q], mode_q)    \u25b9 see Prompt 1", False, False),
+    ("12      props \u2190 student.generate(\u03c0, n = n_proposals)",      False, False),
+    ("13      Proposals \u2190 Proposals \u222a props",                      False, False),
+    ("14    end for",                                                      True, False),
+    ("",                                                                  False, False),
+    ("\u25b8 Phase 3 \u2014 Aggregation",                                   False, True),
+    ("15    C \u2190 AgglomerativeCluster(embed(Proposals))",               False, False),
+    ("16    Top \u2190 top-K cluster representatives by mini-eval KD",     False, False),
+    ("",                                                                  False, False),
+    ("\u25b8 Phase 4 \u2014 Validate & Commit",                             False, True),
+    ("17    P_cand \u2190 P \u2295 Top              \u25b9 append instructions", False, False),
+    ("18    \u0394 \u2190 mean_KD(P_cand, Q_val, T) \u2212 mean_KD(P, Q_val, T)", False, False),
+    ("19    if \u0394 \u2265 \u03b4 then",                                  True, False),
+    ("20      P \u2190 P_cand                   \u25b9 commit",             False, False),
+    ("21    else",                                                         True, False),
+    ("22      revert                          \u25b9 reject",               False, False),
+    ("23    end if",                                                       True, False),
+    ("24  end for",                                                        True, False),
+    ("25  return P",                                                       True, False),
 ]
-for text, bold in algo_lines:
-    algo_block.append(algo_line(text, bold))
+for text, bold, phase in algo_lines:
+    algo_block.append(algo_line(text, bold, phase))
 algo_block.append(Spacer(1,8))
 
 story += algo_block
@@ -1167,8 +1228,45 @@ story += body(
     "<b>Variant modifications:</b> Multi-Teacher replaces Phase 1 with "
     "per-teacher diagnosis and adds a non-regression gate in Phase 4. "
     "Adversarial replaces Phase 1 queries with gap-mined hard examples. "
-    "Federated distributes Phases 1–2 to client sites and runs Phases 3–4 "
-    "on the server, sharing only Proposals (instruction strings, never query data).")
+    "Federated distributes Phases 1\u20132 to client sites and runs Phases 3\u20134 "
+    "on the server, sharing only Proposals (instruction strings, never query data)."
+)
+
+# ── Prompt 1: Self-Interview Template ──────────────────────────────────────
+story += h2("18c.1  Prompt Templates")
+story += body(
+    "The self-interview prompt (referenced as Prompt 1 in Algorithm 1, line 11) "
+    "is precisely structured to constrain the student\u2019s output to actionable "
+    "instructions:")
+story += code_block([
+    "Prompt 1 \u2014 Self-Interview Template",
+    "\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500",
+    "SYSTEM CONTEXT:",
+    "  You are analysing your own performance on a",
+    "  retrieval-augmented generation task.",
+    "",
+    "INPUT VARIABLES:",
+    "  QUERY:           {query}",
+    "  YOUR RESPONSE:   {student_response}",
+    "  FAILURE MODE:    {failure_description}",
+    "  TARGET PATTERN:  {target_pattern}",
+    "",
+    "TASK:",
+    "  In exactly ONE sentence, propose a specific",
+    "  instruction that should be added to your system",
+    "  prompt to avoid this failure in future responses.",
+    "",
+    "RULES:",
+    "  \u2022 Write ONLY the instruction text",
+    "    (no preamble, no explanation)",
+    "  \u2022 Be specific and actionable",
+    "",
+    "    \u2717 BAD:  \"be more careful\"",
+    "    \u2713 GOOD: \"Always cite retrieved passages using",
+    "             [Doc-N] notation after each claim\"",
+    "",
+    "  \u2022 Focus exclusively on the described failure mode",
+])
 story += pgbrk()
 
 # ── Limitations ───────────────────────────────────────────────────────────────
@@ -1199,11 +1297,47 @@ story += blist([
     "this cost is non-trivial. The Ollama backend eliminates monetary cost but not "
     "wall-clock time.",
 
-    "<b>Convergence.</b> The loop uses a fixed iteration count with a commit threshold δ. "
-    "There is no formal convergence guarantee. In practice, 3–5 iterations are sufficient "
-    "for typical RAG workloads, but adversarial or highly out-of-distribution query sets "
-    "may require more.",
+    "<b>Convergence.</b> The hard-gate variant converges monotonically (see Theorem 1 "
+    "below) but only to a local optimum. The soft-gate variant provides stochastic "
+    "exploration but has no formal global convergence guarantee.",
 ])
+
+story += h2("18d.1  Convergence Analysis")
+story += body(
+    "We provide a formal convergence result for the KD-SPAR loop.")
+
+story += callout("Theorem 1 \u2014 Monotone Convergence of KD-SPAR (Hard Gate)",
+    "Let P(0), P(1), P(2), ... be the sequence of prompts produced by "
+    "the KD-SPAR loop with hard commit gate (\u03b4 > 0). "
+    "Let S(P) = mean_KD(P, Q_val, T) be the validation KD score. "
+    "Then: <b>(i)</b> the sequence {S(P(t))} is non-decreasing; "
+    "<b>(ii)</b> since S is bounded above by 1.0, the sequence converges; "
+    "<b>(iii)</b> the converged value S* satisfies "
+    "S* \u2265 S(P(0)) + k \u00b7 \u03b4, "
+    "where k is the number of accepted iterations.")
+
+story += body(
+    "<b>Proof sketch.</b> The validate-and-commit gate (Phase 4) accepts "
+    "P(t+1) only if S(P(t+1)) \u2265 S(P(t)) + \u03b4. "
+    "If rejected, P(t+1) = P(t) (revert). "
+    "Therefore S(P(t+1)) \u2265 S(P(t)) for all t (non-decreasing). "
+    "Since S \u2208 [0, 1], the monotone convergence theorem gives convergence. "
+    "Each accepted step adds at least \u03b4, so the maximum number of accepted "
+    "iterations is bounded by floor((1 \u2212 S(P(0))) / \u03b4). "
+    "With \u03b4 = 0.003 and S(P(0)) \u2248 0.28, this gives at most ~240 "
+    "accepted steps \u2014 far more than the 3\u20135 iterations typically used.  \u220e")
+
+story += body(
+    "<b>Limitations of Theorem 1.</b> The result guarantees convergence to a <i>local</i> "
+    "optimum in the discrete prompt space, not a global one. The prompt space has "
+    "combinatorially many local optima (each instruction addition creates a new branch). "
+    "The soft commit gate (Enhancement 6) addresses this by allowing stochastic "
+    "exploration: it accepts with probability exp(\u0394 / T(n)), where T(n) decreases "
+    "per iteration (simulated annealing). By the standard Metropolis-Hastings argument, "
+    "if T(n) decreases sufficiently slowly (logarithmic schedule), the process converges "
+    "to the global optimum in probability. In practice, the aggressive cooling schedule "
+    "used (T(n) = T(0) / (1 + 0.3n)) prioritises exploitation over exploration, "
+    "giving fast practical convergence without global guarantees.")
 story += pgbrk()
 
 # ── Conclusion ────────────────────────────────────────────────────────────────

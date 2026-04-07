@@ -1,7 +1,7 @@
 {
-  "timestamp": "20260406_104322",
+  "timestamp": "20260406_172106",
   "config": "llama8b\u2192llama3b",
-  "seed": 42,
+  "seed": 123,
   "teacher": "llama3.1:8b",
   "student": "llama3.2:3b",
   "conditions": [
@@ -11,23 +11,23 @@
       "val_metrics": {
         "label": "D_Baseline",
         "n_queries": 10,
-        "mean_kd_score": 0.564,
+        "mean_kd_score": 0.6724,
         "citation_fidelity": 0.9,
         "hedge_match": 10.0,
         "per_query": [
           {
             "q": "What is the primary contribution of KD-SPAR?",
-            "kd": 0.5403,
+            "kd": 0.7737,
             "cit": 1.0
           },
           {
             "q": "Why does the student self-author its own prompt?",
-            "kd": 0.0233,
+            "kd": 0.0876,
             "cit": 0.0
           },
           {
             "q": "What is the T-squared factor and why is it necessary?",
-            "kd": 0.5032,
+            "kd": 0.7849,
             "cit": 1.0
           },
           {
@@ -42,32 +42,32 @@
           },
           {
             "q": "What is the difference between gap-mined and generated adver",
-            "kd": 0.6111,
+            "kd": 0.5797,
             "cit": 1.0
           },
           {
             "q": "How does the validate-and-commit phase prevent overfitting?",
-            "kd": 0.5545,
+            "kd": 0.4811,
             "cit": 1.0
           },
           {
             "q": "What is dark knowledge in KD?",
-            "kd": 0.4833,
+            "kd": 0.7987,
             "cit": 1.0
           },
           {
             "q": "How does KD-SPAR's self-knowledge differ from Constitutional",
-            "kd": 0.4842,
+            "kd": 0.7882,
             "cit": 1.0
           },
           {
             "q": "What makes Llama 3.2 3B suitable as a student model?",
-            "kd": 0.44,
+            "kd": 0.4301,
             "cit": 1.0
           }
         ]
       },
-      "build_time_sec": 6.6,
+      "build_time_sec": 9.2,
       "final_prompt": "You are a precise knowledge assistant. Answer questions using ONLY the provided context passages. Cite sources inline as [Doc-N] where N is the passage number. If the context does not contain the answer, say: 'I cannot find this in the provided context.' Express uncertainty explicitly when evidence is partial."
     },
     {
@@ -76,64 +76,64 @@
       "val_metrics": {
         "label": "C_Random i",
         "n_queries": 10,
-        "mean_kd_score": 0.4665,
-        "citation_fidelity": 0.9,
-        "hedge_match": 90.0,
+        "mean_kd_score": 0.4444,
+        "citation_fidelity": 0.6,
+        "hedge_match": 0.0,
         "per_query": [
           {
             "q": "What is the primary contribution of KD-SPAR?",
-            "kd": 0.326,
+            "kd": 0.4674,
             "cit": 0.0
           },
           {
             "q": "Why does the student self-author its own prompt?",
-            "kd": 0.4826,
-            "cit": 1.0
+            "kd": 0.4152,
+            "cit": 0.0
           },
           {
             "q": "What is the T-squared factor and why is it necessary?",
-            "kd": 0.4355,
-            "cit": 1.0
+            "kd": 0.3694,
+            "cit": 0.0
           },
           {
             "q": "What does the missing_citation failure mode indicate?",
-            "kd": 0.3949,
+            "kd": 0.4134,
             "cit": 1.0
           },
           {
             "q": "How does the calibration ratio equivalence check work?",
-            "kd": 1.0,
+            "kd": 0.4916,
             "cit": 1.0
           },
           {
             "q": "What is the difference between gap-mined and generated adver",
-            "kd": 0.524,
+            "kd": 0.4249,
             "cit": 1.0
           },
           {
             "q": "How does the validate-and-commit phase prevent overfitting?",
-            "kd": 0.3221,
+            "kd": 0.335,
             "cit": 1.0
           },
           {
             "q": "What is dark knowledge in KD?",
-            "kd": 0.4534,
-            "cit": 1.0
+            "kd": 0.5232,
+            "cit": 0.0
           },
           {
             "q": "How does KD-SPAR's self-knowledge differ from Constitutional",
-            "kd": 0.3907,
+            "kd": 0.6887,
             "cit": 1.0
           },
           {
             "q": "What makes Llama 3.2 3B suitable as a student model?",
-            "kd": 0.3359,
+            "kd": 0.3156,
             "cit": 1.0
           }
         ]
       },
-      "build_time_sec": 11.1,
-      "final_prompt": "You are a precise knowledge assistant. Answer questions using ONLY the provided context passages. Cite sources inline as [Doc-N] where N is the passage number. If the context does not contain the answer, say: 'I cannot find this in the provided context.' Express uncertainty explicitly when evidence is partial.\n\n# Random instructions:\n- Use the active voice in all sentences.\n- Always use bullet points when listing multiple items.\n- Use subheadings to organise responses longer than 100 words.\n- Include a brief disclaimer about response limitations.\n- Avoid passive constructions wherever possible.\n- Keep responses under 120 words whenever possible."
+      "build_time_sec": 10.4,
+      "final_prompt": "You are a precise knowledge assistant. Answer questions using ONLY the provided context passages. Cite sources inline as [Doc-N] where N is the passage number. If the context does not contain the answer, say: 'I cannot find this in the provided context.' Express uncertainty explicitly when evidence is partial.\n\n# Random instructions:\n- Begin every response with a one-sentence summary.\n- Use subheadings to organise responses longer than 100 words.\n- Keep responses under 120 words whenever possible.\n- Use the phrase 'In summary' before concluding paragraphs.\n- Use numbered lists for procedural or sequential content.\n- Always spell out acronyms on first use."
     },
     {
       "condition": "B",
@@ -141,23 +141,23 @@
       "val_metrics": {
         "label": "B_External",
         "n_queries": 10,
-        "mean_kd_score": 0.625,
+        "mean_kd_score": 0.7386,
         "citation_fidelity": 1.0,
-        "hedge_match": 0.0,
+        "hedge_match": 20.0,
         "per_query": [
           {
             "q": "What is the primary contribution of KD-SPAR?",
-            "kd": 0.69,
+            "kd": 0.8027,
             "cit": 1.0
           },
           {
             "q": "Why does the student self-author its own prompt?",
-            "kd": 0.57,
+            "kd": 0.8078,
             "cit": 1.0
           },
           {
             "q": "What is the T-squared factor and why is it necessary?",
-            "kd": 0.4771,
+            "kd": 0.7984,
             "cit": 1.0
           },
           {
@@ -172,33 +172,33 @@
           },
           {
             "q": "What is the difference between gap-mined and generated adver",
-            "kd": 0.6294,
+            "kd": 0.5762,
             "cit": 1.0
           },
           {
             "q": "How does the validate-and-commit phase prevent overfitting?",
-            "kd": 0.5545,
+            "kd": 0.4177,
             "cit": 1.0
           },
           {
             "q": "What is dark knowledge in KD?",
-            "kd": 0.5234,
+            "kd": 0.8004,
             "cit": 1.0
           },
           {
             "q": "How does KD-SPAR's self-knowledge differ from Constitutional",
-            "kd": 0.475,
+            "kd": 0.7739,
             "cit": 1.0
           },
           {
             "q": "What makes Llama 3.2 3B suitable as a student model?",
-            "kd": 0.3304,
+            "kd": 0.409,
             "cit": 1.0
           }
         ]
       },
-      "build_time_sec": 65.4,
-      "final_prompt": "You are a precise knowledge assistant. Answer questions using ONLY the provided context passages. Cite sources inline as [Doc-N] where N is the passage number. If the context does not contain the answer, say: 'I cannot find this in the provided context.' Express uncertainty explicitly when evidence is partial.\n\n# External proposals:\n- Please cite specific evidence from provided context for each answer and include the source of that information as [Doc-N].\n- Please provide specific citation information for any claims or statements made in your response.\n- Match the output format of the provided references.\n\n# External proposals:\n- Match the format and content of the reference answer as closely as possible.\n- Match the format of the reference response exactly.\n- Provide a detailed answer in 2-3 sentences, citing relevant sources with inline citations where applicable.\n\n# External proposals:\n- Please provide explicit citations for all information that cannot be verified within a single document, and use phrases such as \"it appears\" or \"to my knowledge\" to indicate uncertainty when necessary.\n- Please provide explicit citation for any information that is not common knowledge and include a brief summary of the relevant source in your response.\n- Match the output format of the provided references exactly."
+      "build_time_sec": 113.1,
+      "final_prompt": "You are a precise knowledge assistant. Answer questions using ONLY the provided context passages. Cite sources inline as [Doc-N] where N is the passage number. If the context does not contain the answer, say: 'I cannot find this in the provided context.' Express uncertainty explicitly when evidence is partial.\n\n# External proposals:\n- Match the reference style of the provided context.\n- Match the response format and content to the reference answer as closely as possible.\n- Provide a clear and concise answer in a neutral tone, including relevant citations from the provided context when applicable [Doc-N]."
     },
     {
       "condition": "A",
@@ -206,64 +206,64 @@
       "val_metrics": {
         "label": "A_KD-SPAR ",
         "n_queries": 10,
-        "mean_kd_score": 0.5207,
-        "citation_fidelity": 0.9,
-        "hedge_match": 20.0,
+        "mean_kd_score": 0.6551,
+        "citation_fidelity": 1.0,
+        "hedge_match": 10.0,
         "per_query": [
           {
             "q": "What is the primary contribution of KD-SPAR?",
-            "kd": 0.0766,
-            "cit": 0.0
+            "kd": 0.8315,
+            "cit": 1.0
           },
           {
             "q": "Why does the student self-author its own prompt?",
-            "kd": 0.5063,
+            "kd": 0.8023,
             "cit": 1.0
           },
           {
             "q": "What is the T-squared factor and why is it necessary?",
-            "kd": 0.51,
+            "kd": 0.8005,
             "cit": 1.0
           },
           {
             "q": "What does the missing_citation failure mode indicate?",
-            "kd": 1.0,
+            "kd": 0.5209,
             "cit": 1.0
           },
           {
             "q": "How does the calibration ratio equivalence check work?",
-            "kd": 0.65,
+            "kd": 0.5877,
             "cit": 1.0
           },
           {
             "q": "What is the difference between gap-mined and generated adver",
-            "kd": 0.6111,
+            "kd": 0.5797,
             "cit": 1.0
           },
           {
             "q": "How does the validate-and-commit phase prevent overfitting?",
-            "kd": 0.5,
+            "kd": 0.4811,
             "cit": 1.0
           },
           {
             "q": "What is dark knowledge in KD?",
-            "kd": 0.4604,
+            "kd": 0.7987,
             "cit": 1.0
           },
           {
             "q": "How does KD-SPAR's self-knowledge differ from Constitutional",
-            "kd": 0.4707,
+            "kd": 0.7778,
             "cit": 1.0
           },
           {
             "q": "What makes Llama 3.2 3B suitable as a student model?",
-            "kd": 0.4217,
+            "kd": 0.3706,
             "cit": 1.0
           }
         ]
       },
-      "build_time_sec": 196.6,
-      "final_prompt": "You are a precise knowledge assistant. Answer questions using ONLY the provided context passages. Cite sources inline as [Doc-N] where N is the passage number. If the context does not contain the answer, say: 'I cannot find this in the provided context.' Express uncertainty explicitly when evidence is partial.\n\n# SPAR refinements:\n- Always cite retrieved passages using [Doc-N] notation after each claim.\n\n# SPAR refinements:\n- Always provide explicit uncertainty when evidence is partial or incomplete.\n- Always provide explicit uncertainty when evidence is partial or absent.\n- Always cite retrieved passages using [Doc-N] notation after each claim."
+      "build_time_sec": 377.4,
+      "final_prompt": "You are a precise knowledge assistant. Answer questions using ONLY the provided context passages. Cite sources inline as [Doc-N] where N is the passage number. If the context does not contain the answer, say: 'I cannot find this in the provided context.' Express uncertainty explicitly when evidence is partial.\n\n# SPAR refinements:\n- Always cite retrieved passages using [Doc-N] notation after each claim."
     },
     {
       "condition": "E",
@@ -271,23 +271,23 @@
       "val_metrics": {
         "label": "E_MetaKDSP",
         "n_queries": 10,
-        "mean_kd_score": 0.6234,
+        "mean_kd_score": 0.7481,
         "citation_fidelity": 1.0,
         "hedge_match": 10.0,
         "per_query": [
           {
             "q": "What is the primary contribution of KD-SPAR?",
-            "kd": 0.5368,
+            "kd": 0.7658,
             "cit": 1.0
           },
           {
             "q": "Why does the student self-author its own prompt?",
-            "kd": 0.6212,
+            "kd": 0.8522,
             "cit": 1.0
           },
           {
             "q": "What is the T-squared factor and why is it necessary?",
-            "kd": 0.5032,
+            "kd": 0.7849,
             "cit": 1.0
           },
           {
@@ -302,32 +302,32 @@
           },
           {
             "q": "What is the difference between gap-mined and generated adver",
-            "kd": 0.6111,
+            "kd": 0.5797,
             "cit": 1.0
           },
           {
             "q": "How does the validate-and-commit phase prevent overfitting?",
-            "kd": 0.5545,
+            "kd": 0.4811,
             "cit": 1.0
           },
           {
             "q": "What is dark knowledge in KD?",
-            "kd": 0.4833,
+            "kd": 0.7987,
             "cit": 1.0
           },
           {
             "q": "How does KD-SPAR's self-knowledge differ from Constitutional",
-            "kd": 0.4842,
+            "kd": 0.7882,
             "cit": 1.0
           },
           {
             "q": "What makes Llama 3.2 3B suitable as a student model?",
-            "kd": 0.44,
+            "kd": 0.4301,
             "cit": 1.0
           }
         ]
       },
-      "build_time_sec": 13.6,
+      "build_time_sec": 13.9,
       "final_prompt": "You are a precise knowledge assistant. Answer questions using ONLY the provided context passages. Cite sources inline as [Doc-N] where N is the passage number. If the context does not contain the answer, say: 'I cannot find this in the provided context.' Express uncertainty explicitly when evidence is partial."
     },
     {
@@ -336,23 +336,23 @@
       "val_metrics": {
         "label": "F_Enhanced",
         "n_queries": 10,
-        "mean_kd_score": 0.6234,
+        "mean_kd_score": 0.7481,
         "citation_fidelity": 1.0,
         "hedge_match": 10.0,
         "per_query": [
           {
             "q": "What is the primary contribution of KD-SPAR?",
-            "kd": 0.5368,
+            "kd": 0.7658,
             "cit": 1.0
           },
           {
             "q": "Why does the student self-author its own prompt?",
-            "kd": 0.6212,
+            "kd": 0.8522,
             "cit": 1.0
           },
           {
             "q": "What is the T-squared factor and why is it necessary?",
-            "kd": 0.5032,
+            "kd": 0.7849,
             "cit": 1.0
           },
           {
@@ -367,32 +367,32 @@
           },
           {
             "q": "What is the difference between gap-mined and generated adver",
-            "kd": 0.6111,
+            "kd": 0.5797,
             "cit": 1.0
           },
           {
             "q": "How does the validate-and-commit phase prevent overfitting?",
-            "kd": 0.5545,
+            "kd": 0.4811,
             "cit": 1.0
           },
           {
             "q": "What is dark knowledge in KD?",
-            "kd": 0.4833,
+            "kd": 0.7987,
             "cit": 1.0
           },
           {
             "q": "How does KD-SPAR's self-knowledge differ from Constitutional",
-            "kd": 0.4842,
+            "kd": 0.7882,
             "cit": 1.0
           },
           {
             "q": "What makes Llama 3.2 3B suitable as a student model?",
-            "kd": 0.44,
+            "kd": 0.4301,
             "cit": 1.0
           }
         ]
       },
-      "build_time_sec": 28.9,
+      "build_time_sec": 22.5,
       "final_prompt": "You are a precise knowledge assistant. Answer questions using ONLY the provided context passages. Cite sources inline as [Doc-N] where N is the passage number. If the context does not contain the answer, say: 'I cannot find this in the provided context.' Express uncertainty explicitly when evidence is partial."
     }
   ]

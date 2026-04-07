@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "sara"
-version = "1.6.0"
+version = "1.7.0"
 description = "Sara -- Knowledge Distillation and KD-SPAR Toolkit"
 authors = [{ name = "Ashutosh Sinha", email = "ajsinha@gmail.com" }]
 readme = "README.md"
@@ -75,7 +75,7 @@ all = [
 ]
 
 [project.urls]
-Repository = "https://github.com/ashutosh-sinha/sara"
+Repository = "https://github.com/ajsinha/sara"
 
 [tool.setuptools.packages.find]
 where = ["."]

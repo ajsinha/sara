@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Copyright (C) 2025 Ashutosh Sinha (ajsinha@gmail.com)
-# Sara (सार) — Knowledge Distillation and KD-SPAR Toolkit  v1.6.0
+# Sara (सार) — Knowledge Distillation and KD-SPAR Toolkit  v1.7.0
 # SPDX-License-Identifier: AGPL-3.0-or-later
-# https://github.com/ashutosh-sinha/sara
+# https://github.com/ajsinha/sara
 #
 # ============================================================
 # Sara (सार) — Local Experimentation Setup & Ablation Script
@@ -54,7 +54,7 @@ log()  { echo -e "${GREEN}[sara]${NC} $*"; }
 warn() { echo -e "${YELLOW}[sara]${NC} $*"; }
 fail() { echo -e "${RED}[sara] ERROR:${NC} $*"; exit 1; }
 
-log "Sara (सार) — Local Experimentation Script v1.6.0"
+log "Sara (सार) — Local Experimentation Script v1.7.0"
 log "Project dir : ${SARA_DIR}"
 log "Configs     : ${CONFIGS}"
 log "Seeds       : ${SEEDS}"

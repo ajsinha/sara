@@ -1,7 +1,7 @@
 # Copyright (C) 2025 Ashutosh Sinha (ajsinha@gmail.com)
-# Sara (सार) — Knowledge Distillation and KD-SPAR Toolkit  v1.6.0
+# Sara (सार) — Knowledge Distillation and KD-SPAR Toolkit  v1.7.0
 # SPDX-License-Identifier: AGPL-3.0-or-later
-# https://github.com/ashutosh-sinha/sara
+# https://github.com/ajsinha/sara
 """
 experiments/kd_spar_ablation_ollama.py
 ========================================
@@ -95,7 +95,18 @@ from sara.rag.ollama_client import (
 )
 from sara.rag.ollama_pipeline import OllamaRAGPipeline
 from sara.rag.ollama_kd_spar import OllamaKDSPAR
-from sara.rag.kd_spar import _kd_score, _classify_failure, _target_pattern, FAILURE_DESCRIPTIONS
+from sara.rag.kd_spar import _kd_score as _kd_score_jaccard, _classify_failure, _target_pattern, FAILURE_DESCRIPTIONS
+from sara.core.utils import kd_score_v2 as _kd_score_v2
+
+# Default: use BERTScore-based scoring for ALL conditions (fairer comparison)
+# Pass --jaccard to revert to token-overlap scoring
+_SCORING = {"use_bert": True}
+
+def _kd_score(student: str, teacher: str) -> float:
+    """Score function used by all conditions — BERTScore by default."""
+    if _SCORING["use_bert"]:
+        return _kd_score_v2(student, teacher, use_bert=True)
+    return _kd_score_jaccard(student, teacher)
 
 RESULTS_DIR = Path(__file__).parent / "results"
 RESULTS_DIR.mkdir(exist_ok=True)
@@ -107,6 +118,8 @@ MODEL_CONFIGS = {
     1: {"teacher": "llama3.1:8b",  "student": "llama3.2:3b",  "label": "llama8b→llama3b"},
     2: {"teacher": "qwen2.5:7b",   "student": "llama3.2:3b",  "label": "qwen7b→llama3b"},
     3: {"teacher": "llama3.1:8b",  "student": "qwen2.5:3b",   "label": "llama8b→qwen3b"},
+    4: {"teacher": "qwen2.5:14b",  "student": "llama3.1:8b",  "label": "qwen14b→llama8b"},   # 8B student — tests capacity ceiling
+    5: {"teacher": "qwen2.5:14b",  "student": "qwen2.5:7b",   "label": "qwen14b→qwen7b"},    # 7B student — same family large
 }
 
 # ── Random instruction pool ────────────────────────────────────────────────
@@ -188,6 +201,66 @@ CORPUS = {
         requires no API key and provides full reproducibility.
     """,
 }
+
+# ── Code generation domain corpus (Item 3: cross-domain test) ──────────────
+CODE_CORPUS = {
+    "python_basics.txt": """
+        Python is a high-level, dynamically typed language. Functions are defined with 'def',
+        classes with 'class'. List comprehensions [expr for x in iterable if cond] are preferred
+        over map/filter. The 'with' statement handles resource management (context managers).
+        Type hints (def func(x: int) -> str) improve readability. F-strings f'value={x}'
+        are the standard for string formatting. The walrus operator := assigns inside expressions.
+    """,
+    "data_structures.txt": """
+        Python's built-in data structures: list (ordered, mutable), tuple (ordered, immutable),
+        dict (key-value, O(1) lookup), set (unordered, unique elements). Collections module adds
+        defaultdict, Counter, deque, namedtuple. For sorted data, use bisect module. heapq provides
+        a min-heap. dataclasses (from dataclasses import dataclass) reduce boilerplate for data
+        containers. Frozen dataclasses are hashable and can be used as dict keys or set elements.
+    """,
+    "algorithms.txt": """
+        Common algorithm patterns: two pointers (sorted array problems), sliding window (subarray
+        problems), binary search (O(log n) on sorted data), BFS/DFS (graph traversal), dynamic
+        programming (overlapping subproblems + optimal substructure), backtracking (constraint
+        satisfaction). Time complexity notation: O(1) constant, O(n) linear, O(n log n)
+        linearithmic, O(n²) quadratic. Space complexity matters for large inputs. Python's
+        sorted() uses Timsort (O(n log n) average and worst case, stable).
+    """,
+    "testing_patterns.txt": """
+        Python testing with pytest: test functions start with test_. Fixtures provide reusable
+        setup (@pytest.fixture). Parametrize runs the same test with multiple inputs
+        (@pytest.mark.parametrize). Mock external dependencies with unittest.mock.patch.
+        Assert with plain assert statements. Coverage: pytest-cov measures line and branch
+        coverage. Test-driven development (TDD): write failing test first, then implement.
+        Property-based testing with hypothesis generates random inputs to find edge cases.
+    """,
+}
+
+CODE_TRAIN_QUERIES = [
+    "Write a Python function that computes the Fibonacci sequence using dynamic programming.",
+    "Explain how Python's list comprehensions work and give three examples.",
+    "Write a function to find all duplicates in a list using a set.",
+    "Implement a binary search function that returns the index of a target in a sorted list.",
+    "Explain the difference between @staticmethod and @classmethod in Python.",
+    "Write a decorator that measures the execution time of a function.",
+    "Implement a simple LRU cache using OrderedDict.",
+    "Write a pytest test suite for a function that validates email addresses.",
+    "Explain Python's GIL and its impact on multithreading.",
+    "Write a generator function that yields prime numbers indefinitely.",
+    "Implement a context manager using both the class-based and decorator approaches.",
+    "Explain how Python's garbage collection works with reference counting and cycle detection.",
+]
+
+CODE_VAL_QUERIES = [
+    "Write a function that merges two sorted lists into one sorted list.",
+    "Explain the difference between deepcopy and shallow copy with examples.",
+    "Write a class that implements an iterator for a binary tree (in-order traversal).",
+    "Explain how to use functools.lru_cache and when it helps.",
+    "Write a function that groups anagrams from a list of strings.",
+    "Implement a simple publish-subscribe event system in Python.",
+    "Explain Python's descriptor protocol (__get__, __set__, __delete__).",
+    "Write a function that validates a balanced parentheses string.",
+]
 
 TRAIN_QUERIES = [
     "What is the role of temperature in knowledge distillation?",
@@ -544,8 +617,15 @@ def run_ablation(
     iterations:    int  = 3,
     seed:          int  = 42,
     quick_mode:    bool = False,
+    corpus:        dict | None = None,
+    train_queries: list[str] | None = None,
+    val_queries:   list[str] | None = None,
 ) -> tuple[list[AblationResult], dict]:
     from sara.core.progress import SaraLogger, Heartbeat, _fmt_elapsed
+
+    _corpus = corpus or CORPUS
+    _train  = train_queries or TRAIN_QUERIES
+    _val    = val_queries or VAL_QUERIES
 
     log = SaraLogger("Sara Ablation")
     log.banner(
@@ -557,8 +637,8 @@ def run_ablation(
     )
 
     random.seed(seed)
-    train_q = TRAIN_QUERIES[:10] if quick_mode else TRAIN_QUERIES
-    val_q   = VAL_QUERIES[:5]    if quick_mode else VAL_QUERIES
+    train_q = _train[:10] if quick_mode else _train
+    val_q   = _val[:5]    if quick_mode else _val
     log.info(f"Train queries: {len(train_q)}   Val queries: {len(val_q)}")
 
     # Start global heartbeat — prints if silent for 30s
@@ -572,7 +652,7 @@ def run_ablation(
         teacher_model, store=store, base_url=OLLAMA_BASE_URL,
         auto_pull=False, temperature=0.0,
     )
-    n = teacher_pipe.ingest(CORPUS)
+    n = teacher_pipe.ingest(_corpus)
     log.done(f"Indexed {n} chunks from corpus")
 
     # ── Harvest teacher responses ────────────────────────────────────────────
@@ -748,7 +828,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="KD-SPAR Ablation — Local Ollama Models"
     )
-    parser.add_argument("--config", type=int, choices=[1,2,3], default=1,
+    parser.add_argument("--config", type=int, choices=[1,2,3,4,5], default=1,
                         help="Model config: 1=llama8b→llama3b, 2=qwen7b→llama3b, 3=llama8b→qwen3b")
     parser.add_argument("--teacher", type=str, default=None,
                         help="Override teacher model (e.g. llama3.1:8b)")
@@ -760,7 +840,15 @@ if __name__ == "__main__":
                         help="Random seed")
     parser.add_argument("--quick", action="store_true",
                         help="Quick mode: 10 train / 5 val queries")
+    parser.add_argument("--jaccard", action="store_true",
+                        help="Use Jaccard scoring instead of BERTScore for all conditions")
+    parser.add_argument("--domain", type=str, choices=["rag", "code"], default="rag",
+                        help="Evaluation domain: 'rag' (default) or 'code' (cross-domain test)")
     args = parser.parse_args()
+
+    # Set scoring mode
+    _SCORING["use_bert"] = not args.jaccard
+    print(f"Scoring: {'BERTScore (kd_score_v2)' if _SCORING['use_bert'] else 'Jaccard (kd_score v1)'}")
 
     # Check Ollama is running
     if not check_ollama_running(OLLAMA_BASE_URL):
@@ -787,12 +875,26 @@ if __name__ == "__main__":
     ensure_model(student_m, OLLAMA_BASE_URL)
 
     # Run
+    # Select domain
+    if args.domain == "code":
+        corpus_d = CODE_CORPUS
+        train_d  = CODE_TRAIN_QUERIES
+        val_d    = CODE_VAL_QUERIES
+        label    = f"code_{label}"
+        print(f"Domain: CODE GENERATION ({len(train_d)} train, {len(val_d)} val)")
+    else:
+        corpus_d = CORPUS
+        train_d  = TRAIN_QUERIES
+        val_d    = VAL_QUERIES
+        print(f"Domain: RAG QA ({len(train_d)} train, {len(val_d)} val)")
+
     t_run_start = time.time()
     results, teacher_responses = run_ablation(
         teacher_model=teacher_m, student_model=student_m,
         config_label=label,
         iterations=args.iterations, seed=args.seed,
         quick_mode=args.quick,
+        corpus=corpus_d, train_queries=train_d, val_queries=val_d,
     )
     report   = print_report(results, label)
     out_path = save_results(results, label, report, args.seed,
