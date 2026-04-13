@@ -1,0 +1,72 @@
+The Transformer Architecture: From Attention Mechanisms to Modern LLMs
+
+The Transformer architecture (Vaswani et al., 2017) revolutionised natural language
+processing by replacing recurrent processing with self-attention mechanisms that compute
+all token interactions in parallel. This architectural innovation enabled training on much
+larger datasets and longer sequences than was practical with RNNs or LSTMs.
+
+Self-Attention Mechanism
+
+The core operation is scaled dot-product attention: Attention(Q,K,V) = softmax(QK^T/sqrt(d_k))V.
+Each input token is projected into three vectors: query (Q), key (K), and value (V) through
+learned linear transformations. The query of each token is compared against all keys to
+produce attention weights, which are then used to compute a weighted sum of values. The
+scaling factor sqrt(d_k) prevents the dot products from growing too large in magnitude,
+which would push the softmax into regions of very small gradients.
+
+Multi-Head Attention
+
+Rather than computing a single attention function, multi-head attention splits Q, K, and V
+into h parallel heads, each operating on a d_k-dimensional subspace. Each head can attend
+to different aspects of the input: one head might capture syntactic relationships (subject-
+verb agreement), another semantic relationships (coreference), and another positional
+patterns (adjacent token interactions). The outputs of all heads are concatenated and
+projected through a final linear layer. Typical configurations use 32 heads for 8B models
+and 64 heads for 70B models.
+
+Positional Encoding
+
+Since self-attention is permutation-invariant (it computes the same output regardless of
+token order), positional information must be explicitly injected. The original Transformer
+used fixed sinusoidal encodings. Modern variants have moved to Rotary Position Embeddings
+(RoPE), which encode position by rotating the query and key vectors in 2D subspaces. RoPE
+provides better length generalisation — models trained with 4K context can often extrapolate
+to 8K or beyond with moderate quality degradation. ALiBi (Attention with Linear Biases)
+takes a different approach, adding a linear bias to attention scores based on the distance
+between query and key tokens.
+
+Feed-Forward Networks
+
+Each transformer block contains a position-wise feed-forward network (FFN) applied
+independently to each token. The standard FFN applies two linear transformations with a
+nonlinearity: FFN(x) = W2 * activation(W1 * x + b1) + b2. The intermediate dimension is
+typically 4x the model dimension. Modern architectures use SwiGLU activations (a gated
+variant of Swish), which empirically outperform ReLU and GELU by providing a smoother
+gradient landscape. The FFN accounts for approximately 2/3 of the model's parameters and
+is believed to store factual knowledge.
+
+Layer Normalisation
+
+Pre-layer normalisation (applied before attention and FFN) is now standard, as it provides
+more stable training dynamics than post-layer normalisation. RMSNorm (Root Mean Square
+normalisation) is a simplified variant that omits the mean-centering step, reducing
+computation by approximately 10% with no measurable quality impact. All modern LLM
+architectures (Llama, Qwen, Gemma, Phi) use pre-layer RMSNorm.
+
+Grouped-Query Attention (GQA)
+
+Standard multi-head attention requires separate K and V projections for each head, which
+becomes a memory bottleneck during inference (the KV cache grows linearly with both sequence
+length and number of heads). GQA shares K and V projections across groups of query heads.
+Llama 3.1 8B uses 8 KV heads shared across 32 query heads (4:1 ratio), reducing the KV
+cache by 4x while maintaining 98% of the quality of full multi-head attention.
+
+Decoder-Only vs Encoder-Decoder
+
+Decoder-only architectures (GPT, Llama, Qwen) use causal attention masking so each token
+can only attend to previous tokens. This makes them natural for autoregressive generation.
+Encoder-decoder architectures (T5, BART) use bidirectional attention in the encoder and
+cross-attention from the decoder to the encoder, making them better suited for tasks where
+the full input should be processed before generating output (e.g., translation,
+summarisation). The current LLM landscape is dominated by decoder-only models due to
+their simplicity and scaling properties.

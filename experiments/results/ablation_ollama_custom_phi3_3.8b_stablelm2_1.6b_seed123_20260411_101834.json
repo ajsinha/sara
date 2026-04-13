@@ -1,0 +1,849 @@
+{
+  "timestamp": "20260411_101834",
+  "config": "custom_phi3_3.8b_stablelm2_1.6b",
+  "seed": 123,
+  "teacher": "phi3:3.8b",
+  "student": "stablelm2:1.6b",
+  "conditions": [
+    {
+      "condition": "D",
+      "description": "Baseline (no tuning)",
+      "val_metrics": {
+        "label": "D_Baseline",
+        "n_queries": 25,
+        "mean_kd_score": 0.609,
+        "citation_fidelity": 0.56,
+        "hedge_match": 16.06,
+        "per_query": [
+          {
+            "q": "What is the primary contribution of KD-SPAR?",
+            "kd": 0.6592,
+            "cit": 1.0
+          },
+          {
+            "q": "Why does the student self-author its own prompt?",
+            "kd": 0.3949,
+            "cit": 0.0
+          },
+          {
+            "q": "What is the T-squared factor and why is it necessary?",
+            "kd": 0.731,
+            "cit": 1.0
+          },
+          {
+            "q": "What does the missing_citation failure mode indicate?",
+            "kd": 0.4689,
+            "cit": 0.0
+          },
+          {
+            "q": "How does the calibration ratio equivalence check work?",
+            "kd": 0.5807,
+            "cit": 1.0
+          },
+          {
+            "q": "What is the difference between gap-mined and generated adver",
+            "kd": 0.7201,
+            "cit": 1.0
+          },
+          {
+            "q": "How does the validate-and-commit phase prevent overfitting?",
+            "kd": 0.8215,
+            "cit": 1.0
+          },
+          {
+            "q": "What is dark knowledge in KD?",
+            "kd": 0.6583,
+            "cit": 1.0
+          },
+          {
+            "q": "How does KD-SPAR's self-knowledge differ from Constitutional",
+            "kd": 0.4082,
+            "cit": 0.0
+          },
+          {
+            "q": "What makes Llama 3.2 3B suitable as a student model?",
+            "kd": 0.7731,
+            "cit": 1.0
+          },
+          {
+            "q": "How does the Transformer self-attention mechanism work?",
+            "kd": 0.7626,
+            "cit": 1.0
+          },
+          {
+            "q": "What is the difference between LoRA and full fine-tuning?",
+            "kd": 0.7492,
+            "cit": 1.0
+          },
+          {
+            "q": "How does BERTScore differ from BLEU as an evaluation metric?",
+            "kd": 0.4771,
+            "cit": 0.0
+          },
+          {
+            "q": "What is the purpose of chunking in a vector database?",
+            "kd": 0.4488,
+            "cit": 0.0
+          },
+          {
+            "q": "How does Constitutional AI use self-critique for alignment?",
+            "kd": 0.4796,
+            "cit": 0.0
+          },
+          {
+            "q": "What is quantisation-aware training and why is it useful?",
+            "kd": 0.4339,
+            "cit": 0.0
+          },
+          {
+            "q": "How does DeepSpeed ZeRO reduce memory requirements?",
+            "kd": 0.4955,
+            "cit": 0.0
+          },
+          {
+            "q": "What are the advantages of few-shot prompting over zero-shot",
+            "kd": 0.7541,
+            "cit": 1.0
+          },
+          {
+            "q": "How does FAISS differ from ChromaDB for vector search?",
+            "kd": 0.8365,
+            "cit": 1.0
+          },
+          {
+            "q": "What is the lottery ticket hypothesis in model compression?",
+            "kd": 0.6303,
+            "cit": 1.0
+          },
+          {
+            "q": "How does the temperature parameter affect generation diversi",
+            "kd": 0.7179,
+            "cit": 1.0
+          },
+          {
+            "q": "What is the difference between data parallelism and tensor p",
+            "kd": 0.5567,
+            "cit": 0.0
+          },
+          {
+            "q": "How does RLHF align models with human preferences?",
+            "kd": 0.4395,
+            "cit": 0.0
+          },
+          {
+            "q": "What is faithfulness grounding in RAG evaluation?",
+            "kd": 0.7755,
+            "cit": 1.0
+          },
+          {
+            "q": "How does prefix tuning differ from prompt tuning?",
+            "kd": 0.4525,
+            "cit": 0.0
+          }
+        ]
+      },
+      "build_time_sec": 30.3,
+      "final_prompt": "You are a precise knowledge assistant. Answer questions using ONLY the provided context passages. Cite sources inline as [Doc-N] where N is the passage number. If the context does not contain the answer, say: 'I cannot find this in the provided context.' Express uncertainty explicitly when evidence is partial."
+    },
+    {
+      "condition": "C",
+      "description": "Random instructions",
+      "val_metrics": {
+        "label": "C_Random i",
+        "n_queries": 25,
+        "mean_kd_score": 0.5905,
+        "citation_fidelity": 0.48,
+        "hedge_match": 16.2,
+        "per_query": [
+          {
+            "q": "What is the primary contribution of KD-SPAR?",
+            "kd": 0.6471,
+            "cit": 1.0
+          },
+          {
+            "q": "Why does the student self-author its own prompt?",
+            "kd": 0.6568,
+            "cit": 1.0
+          },
+          {
+            "q": "What is the T-squared factor and why is it necessary?",
+            "kd": 0.7507,
+            "cit": 1.0
+          },
+          {
+            "q": "What does the missing_citation failure mode indicate?",
+            "kd": 0.4937,
+            "cit": 0.0
+          },
+          {
+            "q": "How does the calibration ratio equivalence check work?",
+            "kd": 0.7002,
+            "cit": 1.0
+          },
+          {
+            "q": "What is the difference between gap-mined and generated adver",
+            "kd": 0.747,
+            "cit": 1.0
+          },
+          {
+            "q": "How does the validate-and-commit phase prevent overfitting?",
+            "kd": 0.41,
+            "cit": 0.0
+          },
+          {
+            "q": "What is dark knowledge in KD?",
+            "kd": 0.4004,
+            "cit": 0.0
+          },
+          {
+            "q": "How does KD-SPAR's self-knowledge differ from Constitutional",
+            "kd": 0.4709,
+            "cit": 0.0
+          },
+          {
+            "q": "What makes Llama 3.2 3B suitable as a student model?",
+            "kd": 0.7964,
+            "cit": 1.0
+          },
+          {
+            "q": "How does the Transformer self-attention mechanism work?",
+            "kd": 0.7687,
+            "cit": 1.0
+          },
+          {
+            "q": "What is the difference between LoRA and full fine-tuning?",
+            "kd": 0.7516,
+            "cit": 1.0
+          },
+          {
+            "q": "How does BERTScore differ from BLEU as an evaluation metric?",
+            "kd": 0.4639,
+            "cit": 0.0
+          },
+          {
+            "q": "What is the purpose of chunking in a vector database?",
+            "kd": 0.4485,
+            "cit": 0.0
+          },
+          {
+            "q": "How does Constitutional AI use self-critique for alignment?",
+            "kd": 0.4505,
+            "cit": 0.0
+          },
+          {
+            "q": "What is quantisation-aware training and why is it useful?",
+            "kd": 0.4099,
+            "cit": 0.0
+          },
+          {
+            "q": "How does DeepSpeed ZeRO reduce memory requirements?",
+            "kd": 0.4962,
+            "cit": 0.0
+          },
+          {
+            "q": "What are the advantages of few-shot prompting over zero-shot",
+            "kd": 0.7831,
+            "cit": 1.0
+          },
+          {
+            "q": "How does FAISS differ from ChromaDB for vector search?",
+            "kd": 0.5249,
+            "cit": 0.0
+          },
+          {
+            "q": "What is the lottery ticket hypothesis in model compression?",
+            "kd": 0.7131,
+            "cit": 1.0
+          },
+          {
+            "q": "How does the temperature parameter affect generation diversi",
+            "kd": 0.6157,
+            "cit": 1.0
+          },
+          {
+            "q": "What is the difference between data parallelism and tensor p",
+            "kd": 0.5411,
+            "cit": 0.0
+          },
+          {
+            "q": "How does RLHF align models with human preferences?",
+            "kd": 0.4783,
+            "cit": 0.0
+          },
+          {
+            "q": "What is faithfulness grounding in RAG evaluation?",
+            "kd": 0.4627,
+            "cit": 0.0
+          },
+          {
+            "q": "How does prefix tuning differ from prompt tuning?",
+            "kd": 0.7817,
+            "cit": 1.0
+          }
+        ]
+      },
+      "build_time_sec": 23.5,
+      "final_prompt": "You are a precise knowledge assistant. Answer questions using ONLY the provided context passages. Cite sources inline as [Doc-N] where N is the passage number. If the context does not contain the answer, say: 'I cannot find this in the provided context.' Express uncertainty explicitly when evidence is partial.\n\n# Random instructions:\n- Begin every response with a one-sentence summary.\n- Use subheadings to organise responses longer than 100 words.\n- Keep responses under 120 words whenever possible.\n- Use the phrase 'In summary' before concluding paragraphs.\n- Use numbered lists for procedural or sequential content.\n- Always spell out acronyms on first use."
+    },
+    {
+      "condition": "B",
+      "description": "External-proposed",
+      "val_metrics": {
+        "label": "B_External",
+        "n_queries": 25,
+        "mean_kd_score": 0.6776,
+        "citation_fidelity": 0.84,
+        "hedge_match": 32.22,
+        "per_query": [
+          {
+            "q": "What is the primary contribution of KD-SPAR?",
+            "kd": 0.5996,
+            "cit": 1.0
+          },
+          {
+            "q": "Why does the student self-author its own prompt?",
+            "kd": 0.6672,
+            "cit": 1.0
+          },
+          {
+            "q": "What is the T-squared factor and why is it necessary?",
+            "kd": 0.7151,
+            "cit": 1.0
+          },
+          {
+            "q": "What does the missing_citation failure mode indicate?",
+            "kd": 0.5147,
+            "cit": 0.0
+          },
+          {
+            "q": "How does the calibration ratio equivalence check work?",
+            "kd": 0.7471,
+            "cit": 1.0
+          },
+          {
+            "q": "What is the difference between gap-mined and generated adver",
+            "kd": 0.744,
+            "cit": 1.0
+          },
+          {
+            "q": "How does the validate-and-commit phase prevent overfitting?",
+            "kd": 0.7721,
+            "cit": 1.0
+          },
+          {
+            "q": "What is dark knowledge in KD?",
+            "kd": 0.7209,
+            "cit": 1.0
+          },
+          {
+            "q": "How does KD-SPAR's self-knowledge differ from Constitutional",
+            "kd": 0.761,
+            "cit": 1.0
+          },
+          {
+            "q": "What makes Llama 3.2 3B suitable as a student model?",
+            "kd": 0.7509,
+            "cit": 1.0
+          },
+          {
+            "q": "How does the Transformer self-attention mechanism work?",
+            "kd": 0.6902,
+            "cit": 1.0
+          },
+          {
+            "q": "What is the difference between LoRA and full fine-tuning?",
+            "kd": 0.7167,
+            "cit": 1.0
+          },
+          {
+            "q": "How does BERTScore differ from BLEU as an evaluation metric?",
+            "kd": 0.4531,
+            "cit": 0.0
+          },
+          {
+            "q": "What is the purpose of chunking in a vector database?",
+            "kd": 0.7186,
+            "cit": 1.0
+          },
+          {
+            "q": "How does Constitutional AI use self-critique for alignment?",
+            "kd": 0.7174,
+            "cit": 1.0
+          },
+          {
+            "q": "What is quantisation-aware training and why is it useful?",
+            "kd": 0.403,
+            "cit": 0.0
+          },
+          {
+            "q": "How does DeepSpeed ZeRO reduce memory requirements?",
+            "kd": 0.8262,
+            "cit": 1.0
+          },
+          {
+            "q": "What are the advantages of few-shot prompting over zero-shot",
+            "kd": 0.7962,
+            "cit": 1.0
+          },
+          {
+            "q": "How does FAISS differ from ChromaDB for vector search?",
+            "kd": 0.626,
+            "cit": 1.0
+          },
+          {
+            "q": "What is the lottery ticket hypothesis in model compression?",
+            "kd": 0.7008,
+            "cit": 1.0
+          },
+          {
+            "q": "How does the temperature parameter affect generation diversi",
+            "kd": 0.6057,
+            "cit": 1.0
+          },
+          {
+            "q": "What is the difference between data parallelism and tensor p",
+            "kd": 0.8316,
+            "cit": 1.0
+          },
+          {
+            "q": "How does RLHF align models with human preferences?",
+            "kd": 0.6753,
+            "cit": 1.0
+          },
+          {
+            "q": "What is faithfulness grounding in RAG evaluation?",
+            "kd": 0.5022,
+            "cit": 0.0
+          },
+          {
+            "q": "How does prefix tuning differ from prompt tuning?",
+            "kd": 0.684,
+            "cit": 1.0
+          }
+        ]
+      },
+      "build_time_sec": 109.9,
+      "final_prompt": "You are a precise knowledge assistant. Answer questions using ONLY the provided context passages. Cite sources inline as [Doc-N] where N is the passage number. If the context does not contain the answer, say: 'I cannot find this in the provided context.' Express uncertainty explicitly when evidence is partial.\n\n# External proposals:\n- If an answer is not found in [Doc-1] or [Doc-2], include a sentence expressing uncertainty: \"While I cannot find this information directly stated in these documents...\" followed by suggesting areas for further research within the context provided.\n- If a question requires more than one sentence for an answer and multiple citations from different passages are needed, structure your response by first addressing each point separately with corresponding [Doc-N] references to maintain clarity and ensure all information is adeledly sourced. For example: \"According to the document provided in Passage 1 ([Doc-1]), ... However, as\n- If there is evidence of bias or speculation in a response without citations from [Doc-N], instruct the assistant: \"Avoid making unsupported claims and ensure all statements are backed by cited sources.\" If uncertainty arises due to incomplete information within context, guide it with: \"When details are not fully clear based on provided evidence alone, express this uncertainty explicitly using phrases like\n\n# External proposals:\n- If a question requires multiple sentences and evidence from provided context passages for citation, ensure that each sentence with supporting information includes an in-text citation using [Doc-N] format where N corresponds to the passage number of the source material used. This will enhance accuracy by explicitly acknowledging sources while providing comprehensive answers.\n- To mitigate format_drift issues in responses by ensnergyAI, incorporate a directive that mandates consistency with [Doc-1] and emphasizes clarity of expression using hedging language only when the context does not provide definitive information as per guidelines from [Doc-2].\n- If multiple pieces of evidence are present in a context passage but only some can be confidently cited due to ambiguity or incomplete information within those passages, instruct the assistant to use [Doc-N] for citations where N is the specific piece of evidence it feels certain about and hedge uncertainty by using phrases like \"it seems\" or \"there'these indicators suggest.\""
+    },
+    {
+      "condition": "A",
+      "description": "KD-SPAR (self-proposed)",
+      "val_metrics": {
+        "label": "A_KD-SPAR ",
+        "n_queries": 25,
+        "mean_kd_score": 0.6275,
+        "citation_fidelity": 0.64,
+        "hedge_match": 8.08,
+        "per_query": [
+          {
+            "q": "What is the primary contribution of KD-SPAR?",
+            "kd": 0.654,
+            "cit": 1.0
+          },
+          {
+            "q": "Why does the student self-author its own prompt?",
+            "kd": 0.368,
+            "cit": 0.0
+          },
+          {
+            "q": "What is the T-squared factor and why is it necessary?",
+            "kd": 0.7043,
+            "cit": 1.0
+          },
+          {
+            "q": "What does the missing_citation failure mode indicate?",
+            "kd": 0.4746,
+            "cit": 0.0
+          },
+          {
+            "q": "How does the calibration ratio equivalence check work?",
+            "kd": 0.6173,
+            "cit": 1.0
+          },
+          {
+            "q": "What is the difference between gap-mined and generated adver",
+            "kd": 0.7248,
+            "cit": 1.0
+          },
+          {
+            "q": "How does the validate-and-commit phase prevent overfitting?",
+            "kd": 0.7093,
+            "cit": 1.0
+          },
+          {
+            "q": "What is dark knowledge in KD?",
+            "kd": 0.7184,
+            "cit": 1.0
+          },
+          {
+            "q": "How does KD-SPAR's self-knowledge differ from Constitutional",
+            "kd": 0.7984,
+            "cit": 1.0
+          },
+          {
+            "q": "What makes Llama 3.2 3B suitable as a student model?",
+            "kd": 0.7877,
+            "cit": 1.0
+          },
+          {
+            "q": "How does the Transformer self-attention mechanism work?",
+            "kd": 0.734,
+            "cit": 1.0
+          },
+          {
+            "q": "What is the difference between LoRA and full fine-tuning?",
+            "kd": 0.7591,
+            "cit": 1.0
+          },
+          {
+            "q": "How does BERTScore differ from BLEU as an evaluation metric?",
+            "kd": 0.4895,
+            "cit": 0.0
+          },
+          {
+            "q": "What is the purpose of chunking in a vector database?",
+            "kd": 0.4734,
+            "cit": 0.0
+          },
+          {
+            "q": "How does Constitutional AI use self-critique for alignment?",
+            "kd": 0.489,
+            "cit": 0.0
+          },
+          {
+            "q": "What is quantisation-aware training and why is it useful?",
+            "kd": 0.7192,
+            "cit": 1.0
+          },
+          {
+            "q": "How does DeepSpeed ZeRO reduce memory requirements?",
+            "kd": 0.5145,
+            "cit": 0.0
+          },
+          {
+            "q": "What are the advantages of few-shot prompting over zero-shot",
+            "kd": 0.4405,
+            "cit": 0.0
+          },
+          {
+            "q": "How does FAISS differ from ChromaDB for vector search?",
+            "kd": 0.7967,
+            "cit": 1.0
+          },
+          {
+            "q": "What is the lottery ticket hypothesis in model compression?",
+            "kd": 0.3992,
+            "cit": 0.0
+          },
+          {
+            "q": "How does the temperature parameter affect generation diversi",
+            "kd": 0.6768,
+            "cit": 1.0
+          },
+          {
+            "q": "What is the difference between data parallelism and tensor p",
+            "kd": 0.8178,
+            "cit": 1.0
+          },
+          {
+            "q": "How does RLHF align models with human preferences?",
+            "kd": 0.5983,
+            "cit": 1.0
+          },
+          {
+            "q": "What is faithfulness grounding in RAG evaluation?",
+            "kd": 0.756,
+            "cit": 1.0
+          },
+          {
+            "q": "How does prefix tuning differ from prompt tuning?",
+            "kd": 0.4671,
+            "cit": 0.0
+          }
+        ]
+      },
+      "build_time_sec": 565.4,
+      "final_prompt": "You are a precise knowledge assistant. Answer questions using ONLY the provided context passages. Cite sources inline as [Doc-N] where N is the passage number. If the context does not contain the answer, say: 'I cannot find this in the provided context.' Express uncertainty explicitly when evidence is partial.\n\n# SPAR refinements:\n- \"Ensure that all generated claims include a [Doc-1] notation for immediate reference, to avoid potential manipulation or misinterpretation of retrieved evidence.\" (Failure mode: [Doc-1])\n- \"Always review and verify your retrieved passages using  [Doc-N] notation before publishing any content.\" (Instruction text: \"Review and Verify\")\n- Include citations using  [Doc-N] notation after each claim in response to avoid uncertainty and ensure accuracy.\n\n# SPAR refinements:\n- Add a requirement that instructs the response generator to always include the exact passage number in citations, inline as [Doc-N], after each claim. This will ensure that every citation is grounded in the retrieved context passages and prevent potential manipulation or misinterpretation of evidence.\n- Add a requirement to your system prompt that instructs users to always include [Doc-N] notation in citations after each claim. This will ensure that every response is grounded in the retrieved context passages and avoid potential manipulation or misinterpretation of retrieved evidence.\n- Add a citation for best practices after each retrieval query to ensure accuracy and avoid potential manipulation or misinterpretation of retrieved evidence. (Failure mode: [Doc-1])"
+    },
+    {
+      "condition": "E",
+      "description": "MetaKDSPAR (meta-prompted)",
+      "val_metrics": {
+        "label": "E_MetaKDSP",
+        "n_queries": 25,
+        "mean_kd_score": 0.6114,
+        "citation_fidelity": 0.56,
+        "hedge_match": 16.06,
+        "per_query": [
+          {
+            "q": "What is the primary contribution of KD-SPAR?",
+            "kd": 0.7184,
+            "cit": 1.0
+          },
+          {
+            "q": "Why does the student self-author its own prompt?",
+            "kd": 0.3949,
+            "cit": 0.0
+          },
+          {
+            "q": "What is the T-squared factor and why is it necessary?",
+            "kd": 0.731,
+            "cit": 1.0
+          },
+          {
+            "q": "What does the missing_citation failure mode indicate?",
+            "kd": 0.4689,
+            "cit": 0.0
+          },
+          {
+            "q": "How does the calibration ratio equivalence check work?",
+            "kd": 0.5807,
+            "cit": 1.0
+          },
+          {
+            "q": "What is the difference between gap-mined and generated adver",
+            "kd": 0.7201,
+            "cit": 1.0
+          },
+          {
+            "q": "How does the validate-and-commit phase prevent overfitting?",
+            "kd": 0.8215,
+            "cit": 1.0
+          },
+          {
+            "q": "What is dark knowledge in KD?",
+            "kd": 0.6583,
+            "cit": 1.0
+          },
+          {
+            "q": "How does KD-SPAR's self-knowledge differ from Constitutional",
+            "kd": 0.4082,
+            "cit": 0.0
+          },
+          {
+            "q": "What makes Llama 3.2 3B suitable as a student model?",
+            "kd": 0.7731,
+            "cit": 1.0
+          },
+          {
+            "q": "How does the Transformer self-attention mechanism work?",
+            "kd": 0.7626,
+            "cit": 1.0
+          },
+          {
+            "q": "What is the difference between LoRA and full fine-tuning?",
+            "kd": 0.7492,
+            "cit": 1.0
+          },
+          {
+            "q": "How does BERTScore differ from BLEU as an evaluation metric?",
+            "kd": 0.4771,
+            "cit": 0.0
+          },
+          {
+            "q": "What is the purpose of chunking in a vector database?",
+            "kd": 0.4488,
+            "cit": 0.0
+          },
+          {
+            "q": "How does Constitutional AI use self-critique for alignment?",
+            "kd": 0.4796,
+            "cit": 0.0
+          },
+          {
+            "q": "What is quantisation-aware training and why is it useful?",
+            "kd": 0.4339,
+            "cit": 0.0
+          },
+          {
+            "q": "How does DeepSpeed ZeRO reduce memory requirements?",
+            "kd": 0.4955,
+            "cit": 0.0
+          },
+          {
+            "q": "What are the advantages of few-shot prompting over zero-shot",
+            "kd": 0.7541,
+            "cit": 1.0
+          },
+          {
+            "q": "How does FAISS differ from ChromaDB for vector search?",
+            "kd": 0.8365,
+            "cit": 1.0
+          },
+          {
+            "q": "What is the lottery ticket hypothesis in model compression?",
+            "kd": 0.6303,
+            "cit": 1.0
+          },
+          {
+            "q": "How does the temperature parameter affect generation diversi",
+            "kd": 0.7179,
+            "cit": 1.0
+          },
+          {
+            "q": "What is the difference between data parallelism and tensor p",
+            "kd": 0.5567,
+            "cit": 0.0
+          },
+          {
+            "q": "How does RLHF align models with human preferences?",
+            "kd": 0.4395,
+            "cit": 0.0
+          },
+          {
+            "q": "What is faithfulness grounding in RAG evaluation?",
+            "kd": 0.7755,
+            "cit": 1.0
+          },
+          {
+            "q": "How does prefix tuning differ from prompt tuning?",
+            "kd": 0.4525,
+            "cit": 0.0
+          }
+        ]
+      },
+      "build_time_sec": 38.2,
+      "final_prompt": "You are a precise knowledge assistant. Answer questions using ONLY the provided context passages. Cite sources inline as [Doc-N] where N is the passage number. If the context does not contain the answer, say: 'I cannot find this in the provided context.' Express uncertainty explicitly when evidence is partial."
+    },
+    {
+      "condition": "F",
+      "description": "Enhanced KD-SPAR (all improvements)",
+      "val_metrics": {
+        "label": "F_Enhanced",
+        "n_queries": 25,
+        "mean_kd_score": 0.6125,
+        "citation_fidelity": 0.56,
+        "hedge_match": 16.06,
+        "per_query": [
+          {
+            "q": "What is the primary contribution of KD-SPAR?",
+            "kd": 0.7454,
+            "cit": 1.0
+          },
+          {
+            "q": "Why does the student self-author its own prompt?",
+            "kd": 0.3949,
+            "cit": 0.0
+          },
+          {
+            "q": "What is the T-squared factor and why is it necessary?",
+            "kd": 0.731,
+            "cit": 1.0
+          },
+          {
+            "q": "What does the missing_citation failure mode indicate?",
+            "kd": 0.4689,
+            "cit": 0.0
+          },
+          {
+            "q": "How does the calibration ratio equivalence check work?",
+            "kd": 0.5807,
+            "cit": 1.0
+          },
+          {
+            "q": "What is the difference between gap-mined and generated adver",
+            "kd": 0.7201,
+            "cit": 1.0
+          },
+          {
+            "q": "How does the validate-and-commit phase prevent overfitting?",
+            "kd": 0.8215,
+            "cit": 1.0
+          },
+          {
+            "q": "What is dark knowledge in KD?",
+            "kd": 0.6583,
+            "cit": 1.0
+          },
+          {
+            "q": "How does KD-SPAR's self-knowledge differ from Constitutional",
+            "kd": 0.4082,
+            "cit": 0.0
+          },
+          {
+            "q": "What makes Llama 3.2 3B suitable as a student model?",
+            "kd": 0.7731,
+            "cit": 1.0
+          },
+          {
+            "q": "How does the Transformer self-attention mechanism work?",
+            "kd": 0.7626,
+            "cit": 1.0
+          },
+          {
+            "q": "What is the difference between LoRA and full fine-tuning?",
+            "kd": 0.7492,
+            "cit": 1.0
+          },
+          {
+            "q": "How does BERTScore differ from BLEU as an evaluation metric?",
+            "kd": 0.4771,
+            "cit": 0.0
+          },
+          {
+            "q": "What is the purpose of chunking in a vector database?",
+            "kd": 0.4488,
+            "cit": 0.0
+          },
+          {
+            "q": "How does Constitutional AI use self-critique for alignment?",
+            "kd": 0.4796,
+            "cit": 0.0
+          },
+          {
+            "q": "What is quantisation-aware training and why is it useful?",
+            "kd": 0.4339,
+            "cit": 0.0
+          },
+          {
+            "q": "How does DeepSpeed ZeRO reduce memory requirements?",
+            "kd": 0.4955,
+            "cit": 0.0
+          },
+          {
+            "q": "What are the advantages of few-shot prompting over zero-shot",
+            "kd": 0.7541,
+            "cit": 1.0
+          },
+          {
+            "q": "How does FAISS differ from ChromaDB for vector search?",
+            "kd": 0.8365,
+            "cit": 1.0
+          },
+          {
+            "q": "What is the lottery ticket hypothesis in model compression?",
+            "kd": 0.6303,
+            "cit": 1.0
+          },
+          {
+            "q": "How does the temperature parameter affect generation diversi",
+            "kd": 0.7179,
+            "cit": 1.0
+          },
+          {
+            "q": "What is the difference between data parallelism and tensor p",
+            "kd": 0.5567,
+            "cit": 0.0
+          },
+          {
+            "q": "How does RLHF align models with human preferences?",
+            "kd": 0.4395,
+            "cit": 0.0
+          },
+          {
+            "q": "What is faithfulness grounding in RAG evaluation?",
+            "kd": 0.7755,
+            "cit": 1.0
+          },
+          {
+            "q": "How does prefix tuning differ from prompt tuning?",
+            "kd": 0.4525,
+            "cit": 0.0
+          }
+        ]
+      },
+      "build_time_sec": 48.1,
+      "final_prompt": "You are a precise knowledge assistant. Answer questions using ONLY the provided context passages. Cite sources inline as [Doc-N] where N is the passage number. If the context does not contain the answer, say: 'I cannot find this in the provided context.' Express uncertainty explicitly when evidence is partial."
+    }
+  ]
+}

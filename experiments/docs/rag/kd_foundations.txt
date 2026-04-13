@@ -1,0 +1,80 @@
+Knowledge Distillation: Theoretical Foundations and Modern Practice
+
+Knowledge distillation (KD) is a model compression technique that transfers learned
+representations from a large, high-capacity teacher model to a smaller, more efficient
+student model. The foundational work by Hinton, Vinyals, and Dean (2015) formalised the
+idea of using temperature-scaled softmax outputs as "soft targets" for training.
+
+The Temperature Mechanism
+
+The temperature parameter T controls the entropy of the output distribution. At T=1
+(standard softmax), the distribution is peaked around the most likely class. As T increases,
+the distribution flattens, revealing the relative probabilities between non-top classes.
+This inter-class similarity structure is what Hinton termed "dark knowledge" — it encodes
+the teacher's learned relationships between concepts that hard labels (one-hot vectors)
+cannot capture. For example, a teacher classifying images might assign 0.001 probability
+to "cat" when the true label is "dog" but only 0.0001 to "car". This 10x ratio tells
+the student that dogs and cats share visual features that cars do not.
+
+The Combined Distillation Loss
+
+The training objective combines two loss terms:
+
+  L = alpha * T^2 * KL(student_soft || teacher_soft) + (1 - alpha) * CE(student_hard, labels)
+
+The first term (KL divergence) measures how well the student matches the teacher's softened
+output distribution. The T-squared factor is a gradient magnitude correction: because
+softening the distribution reduces gradient magnitudes by approximately 1/T^2, this factor
+restores them to the correct scale. Without T^2 scaling, the distillation signal would be
+overwhelmed by the hard-label cross-entropy term at high temperatures.
+
+The alpha parameter (typically 0.5-0.9) controls the balance. Higher alpha values prioritise
+the teacher's distributional knowledge, while lower values anchor the student to the labeled
+data. In practice, alpha=0.7 with T=4-8 provides a good starting point for classification.
+
+Variants of Knowledge Distillation
+
+Feature-Based Distillation (FitNets): Rather than matching output distributions, FitNets
+(Romero et al., 2015) align the intermediate layer representations of teacher and student.
+This requires a projection layer to map the student's thinner hidden states to the
+teacher's wider ones. The advantage is that the student learns not just what to predict
+but how to represent the input internally.
+
+Attention Transfer: Zagoruyko and Komodakis (2017) proposed aligning the spatial attention
+maps between teacher and student. Attention maps summarise where the model "looks" when
+making predictions. By matching these maps, the student learns to focus on the same input
+regions as the teacher, even with fewer parameters.
+
+Relational Knowledge Distillation (RKD): Park et al. (2019) argued that structural
+relationships between samples matter more than individual representations. RKD distils
+pairwise distance and angle relationships, teaching the student to preserve the geometric
+structure of the teacher's representation space.
+
+Self-Distillation: Born-Again Networks (Furlanello et al., 2018) showed that distilling a
+model into an identical architecture can improve performance. The student, despite having the
+same capacity, benefits from the regularisation effect of soft targets. This challenges
+the assumption that distillation only works when compressing to smaller models.
+
+Progressive Distillation: For large capacity gaps (e.g., 70B to 3B), direct distillation
+may lose too much information. Progressive distillation introduces intermediate "teaching
+assistant" models: the 70B teacher distils to a 13B assistant, which then distils to the
+3B student. Each step reduces capacity by a smaller ratio, preserving more knowledge.
+
+Online Mutual Distillation: Zhang et al. (2018) proposed Deep Mutual Learning, where two
+student networks teach each other simultaneously without a pre-trained teacher. Both start
+from random initialisation and share soft targets during co-training. Despite neither being
+individually stronger, the mutual knowledge exchange consistently improves both, suggesting
+diverse predictions from different initialisations provide implicit ensemble distillation.
+
+Modern Applications in LLMs
+
+In the era of large language models, knowledge distillation has taken new forms. API-based
+distillation uses a large model (e.g., GPT-4) as a teacher to generate training data for
+smaller models, without requiring access to the teacher's weights or logits. This is
+sometimes called "distillation through generation" — the student learns from the teacher's
+natural language outputs rather than its probability distribution.
+
+The key challenge in LLM distillation is that output distributions are over vocabularies of
+32K-128K tokens, making full distributional matching expensive. Most practical approaches
+use sequence-level distillation, where the student is trained to match the teacher's complete
+output sequences rather than token-level distributions.

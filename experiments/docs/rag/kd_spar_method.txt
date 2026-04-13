@@ -1,0 +1,72 @@
+KD-SPAR: Knowledge Distillation via Student Prompt Auto-Rewriting
+
+KD-SPAR is a novel knowledge distillation paradigm that operates entirely at the prompt
+level, requiring no access to model weights, gradients, or internal representations. Instead
+of modifying the student model's parameters, KD-SPAR iteratively refines the student's
+system prompt so that its outputs more closely match the teacher's behavior.
+
+The Core Mechanism
+
+Traditional knowledge distillation requires white-box access to at least the teacher's
+output logits. KD-SPAR eliminates this requirement by working with natural language outputs
+only. The student model diagnoses its own failure modes by comparing its responses to the
+teacher's responses, then proposes targeted amendments to its own system prompt. This
+self-referential loop is what makes KD-SPAR unique: the same model that will execute the
+instructions is the one that writes them.
+
+The Four Phases
+
+Phase 1 — Diagnostic Pass: The student and teacher both respond to a set of training
+queries. Each student response is compared to the corresponding teacher response using a
+composite scoring function that measures content overlap (via Jaccard similarity or
+BERTScore), citation fidelity (whether the student cites the same sources), and hedging
+calibration (whether the student expresses appropriate uncertainty). Failures are classified
+into specific categories: missing_citation, hallucination, over_hedging, under_hedging,
+incomplete_coverage, and structural_mismatch.
+
+Phase 2 — Self-Interview: For each identified failure mode, the student model is prompted
+to introspect on what instruction would prevent that specific failure. The key prompt is:
+"You produced [student_response] but the target was [teacher_response]. The failure mode
+is [category]. What single instruction would you add to your system prompt to prevent
+this?" The student generates a candidate instruction. This is the self-knowledge step —
+the student uses its understanding of its own response tendencies to propose a fix.
+
+Phase 3 — Aggregation: All candidate instructions from Phase 2 are collected, clustered
+by semantic similarity, and scored by how frequently each failure mode appeared. The top-K
+instructions (typically K=3-5) are selected for validation. Duplicate or contradictory
+instructions are filtered out. The aggregation step prevents prompt bloat by keeping only
+the most impactful amendments.
+
+Phase 4 — Validate-and-Commit: The candidate prompt (original + new instructions) is
+evaluated on the same training queries. If the composite KD score improves, the new prompt
+is committed; otherwise, it is rejected and the loop continues with the current prompt.
+This gating step prevents regression — the prompt can only get better or stay the same,
+never worse.
+
+The Self-Knowledge Hypothesis
+
+The central research question is whether the student has privileged knowledge about what
+instructions will improve its own performance. Because the proposer and the executor are
+the same model, the student may understand its own failure modes better than an external
+observer. The A-B gap metric quantifies this: Condition A (student self-proposes) versus
+Condition B (teacher proposes on behalf of student). An A-B gap significantly greater than
+zero supports the self-knowledge hypothesis.
+
+This is distinct from Constitutional AI (Bai et al., 2022), where a model evaluates its
+own outputs against pre-defined principles. In KD-SPAR, the model does not just evaluate —
+it diagnoses specific failure categories and proposes targeted fixes. The diagnostic
+granularity (missing_citation vs hallucination vs over_hedging) gives the self-interview
+structured material to work with.
+
+Comparison with Related Approaches
+
+DSPy (Khattab et al., 2023) optimises prompts using a compiler, but the optimisation is
+external — a separate search process evaluates candidate prompts. OPRO (Yang et al., 2023)
+uses an LLM to propose prompt improvements, but the proposer is typically a different
+(larger) model than the executor. KD-SPAR is unique in requiring the executor to be its
+own proposer, making it a test of self-knowledge rather than external optimisation.
+
+AutoPrompt uses gradient-based token search, requiring white-box access. Prompt tuning
+learns continuous embeddings prepended to the input, also requiring gradient access. KD-SPAR
+works purely through natural language, making it applicable to any API-accessible model
+regardless of whether weights are available.

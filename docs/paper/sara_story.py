@@ -1,5 +1,5 @@
 # Copyright (C) 2025 Ashutosh Sinha (ajsinha@gmail.com)
-# Sara (सार) — Knowledge Distillation and KD-SPAR Toolkit  v1.7.0
+# Sara (सार) — Knowledge Distillation and KD-SPAR Toolkit  v1.8.3
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # https://github.com/ajsinha/sara
 from pathlib import Path
@@ -1385,7 +1385,7 @@ story += part_banner("VIII", "Novelty & Research Analysis",
 
 story += h1("19. Novelties of KD-SPAR")
 story += body(
-    "This section offers an honest assessment of KD-SPAR's contributions "
+    "This section assesses KD-SPAR's contributions "
     "relative to the existing literature — covering the core novelty claims, "
     "a systematic comparison to prior art, and a summary of the research "
     "positioning.")
@@ -1457,14 +1457,16 @@ story += pgbrk()
 # ══════════════════════════════════════════════════════════════════════════════
 
 # ======================================================================
-# SECTION 20 — EXPERIMENTAL RESULTS  (generated 2026-04-06 by patch_paper.py)
+
+# ======================================================================
+# SECTION 20 — EXPERIMENTAL RESULTS  (generated 2026-04-12 by patch_paper.py)
 # ======================================================================
 
 story += h1("20. Experimental Results: Self-Knowledge Hypothesis Test")
 story += body(
     "This section reports measured results from the controlled KD-SPAR ablation "
-    "experiment. All values are computed from <b>10 experimental run(s)</b> "
-    "across 2 model configuration(s). No numbers in this section are "
+    "experiment. All values are computed from <b>28 experimental run(s)</b> "
+    "across 8 model configuration(s). No numbers in this section are "
     "synthetic \u2014 every value is derived from actual model outputs evaluated "
     "against teacher response traces."
 )
@@ -1504,10 +1506,10 @@ story += body(
     "<b>Hardware and models.</b> Experiments were run on a System76 OryxPro "
     "(Pop!_OS, NVIDIA RTX 3070 Ti) using the Ollama local inference runtime "
     "at temperature 0.0 for full reproducibility. "
-    "Teacher(s): qwen2.5:7b, llama3.1:8b. "
-    "Student(s): llama3.2:3b. "
+    "Teacher(s): llama3.1:8b, phi3:3.8b, qwen2.5:7b. "
+    "Student(s): smollm2:1.7b, llama3.2:3b, tinyllama:1.1b, gemma2:2b, qwen2.5:3b, stablelm2:1.6b. "
     "Each configuration used 5 seed(s) with 3 SPAR iterations per "
-    "condition, yielding 10 total runs."
+    "condition, yielding 28 total runs."
 )
 story += body(
     "<b>Evaluation.</b> Each condition\u2019s final prompt is evaluated on "
@@ -1521,15 +1523,26 @@ story += h2("20.2  Main Results")
 story += dtable(
     ["Cond.", "Description", "KD Score \u2191", "\u0394 vs D", "Citation Fid."],
     [
-        ["A", "KD-SPAR (student self-proposed)", "0.362 ± 0.512", "+0.026", "0.500 ± 0.707"],
-        ["B", "Externally proposed (teacher)", "0.367 ± 0.519", "+0.031", "0.490 ± 0.693"],
-        ["C", "Random instructions", "0.271 ± 0.384", "-0.065", "0.410 ± 0.580"],
-        ["D", "No prompt tuning (baseline)", "0.336 ± 0.475", "+0.000", "0.450 ± 0.636"],
-        ["E", "MetaKDSPAR (meta-prompted)", "0.374 ± 0.529", "+0.038", "0.500 ± 0.707"],
-        ["F", "Enhanced KD-SPAR (all improvements)", "0.374 ± 0.529", "+0.038", "0.500 ± 0.707"],
+        ["A", "KD-SPAR (student self-proposed)", "0.547 ± 0.249", "+0.055", "0.582 ± 0.428"],
+        ["B", "Externally proposed (teacher)", "0.567 ± 0.251", "+0.074", "0.631 ± 0.400"],
+        ["C", "Random instructions", "0.464 ± 0.198", "-0.029", "0.356 ± 0.295"],
+        ["D", "No prompt tuning (baseline)", "0.492 ± 0.226", "+0.000", "0.453 ± 0.390"],
+        ["E", "MetaKDSPAR (meta-prompted)", "0.503 ± 0.236", "+0.011", "0.465 ± 0.407"],
+        ["F", "Enhanced KD-SPAR (all improvements)", "0.500 ± 0.233", "+0.008", "0.460 ± 0.403"],
     ],
     col_widths=[0.55*inch, 2.15*inch, 1.35*inch, 0.85*inch, 1.80*inch]
 )
+
+# ── Chart: Condition Performance ──────────────────────────────────────────
+try:
+    story += results_bar_chart(
+        ['gemma2:2b', 'llama3.2:3b', 'qwen2.5:3b', 'smollm2:1.7b', 'stablelm2:1.6b', 'tinyllama:1.1b', 'llama3.2:3b'],
+        {'D': [0.6535, 0.6762, 0.4846, 0.4259, 0.6082, 0.419, 0.6724], 'C': [0.5801, 0.4871, 0.5933, 0.4712, 0.6112, 0.4237, 0.5424], 'B': [0.7288, 0.7141, 0.6904, 0.5038, 0.6877, 0.4738, 0.7335], 'A': [0.7362, 0.7171, 0.6616, 0.4799, 0.6291, 0.4314, 0.7239], 'E': [0.6535, 0.6762, 0.4844, 0.4258, 0.6105, 0.4287, 0.7481], 'F': [0.6535, 0.6507, 0.4849, 0.4259, 0.612, 0.4283, 0.7481]},
+        title="KD Score by Condition and Student Model",
+        fig_num="20.1"
+    )
+except Exception:
+    pass  # charts are optional — skip if data insufficient
 
 story += h2("20.3  A\u2212B Gap Analysis")
 story += body(
@@ -1540,15 +1553,32 @@ story += body(
 story += dtable(
     ["Config", "Teacher", "Student", "Seeds", "A\u2212B Gap", "H\u2081"],
     [
+        ["custom_phi3_3.8b_gem", "phi3:3.8b", "gemma2:2b", "3", "+0.0074 \u00b1 0.0193", "\u2713 Supported"],
+        ["custom_phi3_3.8b_lla", "phi3:3.8b", "llama3.2:3b", "3", "+0.0029 \u00b1 0.0477", "\u2713 Supported"],
+        ["custom_phi3_3.8b_qwe", "phi3:3.8b", "qwen2.5:3b", "3", "-0.0288 \u00b1 0.0196", "\u2717 Not supported"],
+        ["custom_phi3_3.8b_smo", "phi3:3.8b", "smollm2:1.7b", "3", "-0.0239 \u00b1 0.0326", "\u2717 Not supported"],
+        ["custom_phi3_3.8b_sta", "phi3:3.8b", "stablelm2:1.6b", "3", "-0.0586 \u00b1 0.0190", "\u2717 Not supported"],
+        ["custom_phi3_3.8b_tin", "phi3:3.8b", "tinyllama:1.1b", "3", "-0.0425 \u00b1 0.0071", "\u2717 Not supported"],
         ["llama8b→llama3b", "llama3.1:8b", "llama3.2:3b", "5", "-0.0097 \u00b1 0.0444", "\u2717 Not supported"],
         ["qwen7b→llama3b", "qwen2.5:7b", "llama3.2:3b", "5", "+0.0000 \u00b1 0.0000", "\u2717 Not supported"],
     ],
     col_widths=[1.5*inch, 1.4*inch, 1.1*inch, 0.55*inch, 1.5*inch, 1.15*inch]
 )
 story += body(
-    "Overall mean A\u2212B gap: <b>-0.0048</b> \u00b1 0.0301 "
-    "(n=10, negative)."
+    "Overall mean A\u2212B gap: <b>-0.0171</b> \u00b1 0.0329 "
+    "(n=28, negative)."
 )
+
+# ── Chart: Gap Analysis ───────────────────────────────────────────────────
+try:
+    story += results_gap_chart(
+        ['gemma2:2b', 'llama3.2:3b', 'qwen2.5:3b', 'smollm2:1.7b', 'stablelm2:1.6b', 'tinyllama:1.1b', 'llama3.2:3b'],
+        {'A\\u2212B': [0.0074, 0.003, -0.0288, -0.0239, -0.0586, -0.0424, -0.0096], 'E\\u2212A': [-0.0827, -0.0409, -0.1772, -0.0541, -0.0186, -0.0027, 0.0242], 'F\\u2212A': [-0.0827, -0.0664, -0.1767, -0.054, -0.0171, -0.0031, 0.0242], 'F\\u2212B': [-0.0753, -0.0634, -0.2055, -0.0779, -0.0757, -0.0455, 0.0146]},
+        title="A\u2212B, E\u2212A, F\u2212A, and F\u2212B Gaps by Student Model",
+        fig_num="20.2"
+    )
+except Exception:
+    pass
 
 story += h2("20.4  Statistical Analysis")
 story += body(
@@ -1562,26 +1592,26 @@ story += dtable(
     col_widths=[1.2*inch, 5.5*inch]
 )
 story += body(
-    "n = 10, mean gap = -0.0048, std = 0.0301, "
-    "SE = 0.0095."
+    "n = 28, mean gap = -0.0171, std = 0.0329, "
+    "SE = 0.0062."
 )
 story += blist([
-    "t(9) = -0.508   (critical value t_{df,0.05} = 1.833)",
-    "p = 0.6894   (one-sided)",
-    "Cohen\u2019s d = -0.161   (negligible effect)",
-    "95%% CI: [-0.0222, +0.0126]",
+    "t(27) = -2.744   (critical value t_{df,0.05} = 1.697)",
+    "p = 0.9967   (one-sided)",
+    "Cohen\u2019s d = -0.518   (medium effect)",
+    "95%% CI: [-0.0277, -0.0065]",
     "H\u2080 <b>rejected</b> at \u03b1\u2009=\u20090.05.",
 ])
 
 story += h2("20.5  Discussion")
-story += gold_callout("Finding", "The A\u2212B gap is <b>negative</b> (-0.0048), indicating that externally-proposed instructions (B) matched or outperformed self-authored instructions (A). This does <b>not</b> support the self-knowledge hypothesis in this configuration. Possible causes: (i) the student model (llama3.2:3b) may lack sufficient meta-cognitive capability at its parameter count; (ii) 3 SPAR iterations may be insufficient for self-interview convergence; (iii) Jaccard token overlap may not capture the semantic improvements self-authored prompts provide. Upgrading to BERTScore and running 5+ iterations is recommended before drawing definitive conclusions.")
+story += gold_callout("Finding", "The A\u2212B gap is <b>negative</b> (-0.0171), indicating that externally-proposed instructions (B) matched or outperformed self-authored instructions (A). This does <b>not</b> support the self-knowledge hypothesis in this configuration. Possible causes: (i) the student model (smollm2:1.7b, llama3.2:3b, tinyllama:1.1b, gemma2:2b, qwen2.5:3b, stablelm2:1.6b) may lack sufficient meta-cognitive capability at its parameter count; (ii) 3 SPAR iterations may be insufficient for self-interview convergence; (iii) Jaccard token overlap may not capture the semantic improvements self-authored prompts provide. Upgrading to BERTScore and running 5+ iterations is recommended before drawing definitive conclusions.")
 story += body(
-    "<b>Baseline ladder.</b> Condition B outperforms D, confirming KD-guided proposal adds value. Condition C shows deviation from D, suggesting even random instructions interact with model behaviour non-trivially."
+    "<b>Baseline ladder.</b> Condition B (externally-proposed, KD-guided) outperforms both C (random) and D (no tuning), confirming the KD signal itself is informative regardless of who proposes. Condition C performs at or below D, confirming random prompt augmentation provides no systematic benefit \u2014 improvement requires the KD scoring signal, not just additional instructions. The control conditions behave as expected."
 )
-if "<b>MetaKDSPAR (E\u2212A gap = +0.0121).</b> Multi-perspective diagnosis outperforms flat single-pass diagnosis by a meaningful margin. The specialist decomposition (citation, calibration, completeness, format experts) catches compound failures that the monolithic classifier misses, producing higher-quality proposals.":
-    story += body("<b>MetaKDSPAR (E\u2212A gap = +0.0121).</b> Multi-perspective diagnosis outperforms flat single-pass diagnosis by a meaningful margin. The specialist decomposition (citation, calibration, completeness, format experts) catches compound failures that the monolithic classifier misses, producing higher-quality proposals.")
-if "<b>Enhanced KD-SPAR (F\u2212A gap = +0.0121, F\u2212B gap = +0.0072).</b> The eight enhancements collectively outperform both base KD-SPAR and external proposal. BERTScore semantic scoring, teacher-guided interviews, and the soft commit gate all contribute to higher convergence rates. The warm-start from external proposals gives the self-interview a stronger foundation to build on.":
-    story += body("<b>Enhanced KD-SPAR (F\u2212A gap = +0.0121, F\u2212B gap = +0.0072).</b> The eight enhancements collectively outperform both base KD-SPAR and external proposal. BERTScore semantic scoring, teacher-guided interviews, and the soft commit gate all contribute to higher convergence rates. The warm-start from external proposals gives the self-interview a stronger foundation to build on.")
+if "<b>MetaKDSPAR (E\u2212A gap = -0.0440).</b> Multi-perspective diagnosis did not outperform flat diagnosis in this configuration. Possible explanations: (i) the student model may lack the capacity to maintain distinct specialist perspectives; (ii) the conductor synthesis step may be discarding useful specialist signals; (iii) 3 iterations may be insufficient for the richer proposal space to converge.":
+    story += body("<b>MetaKDSPAR (E\u2212A gap = -0.0440).</b> Multi-perspective diagnosis did not outperform flat diagnosis in this configuration. Possible explanations: (i) the student model may lack the capacity to maintain distinct specialist perspectives; (ii) the conductor synthesis step may be discarding useful specialist signals; (iii) 3 iterations may be insufficient for the richer proposal space to converge.")
+if "<b>Enhanced KD-SPAR (F\u2212A gap = -0.0470).</b> The additional complexity did not translate to improvement in this configuration. The warm-start may be leading the prompt into a local optimum that the self-interview cannot escape, or the BERTScore metric may be measuring different aspects than what the SPAR loop optimises for.":
+    story += body("<b>Enhanced KD-SPAR (F\u2212A gap = -0.0470).</b> The additional complexity did not translate to improvement in this configuration. The warm-start may be leading the prompt into a local optimum that the self-interview cannot escape, or the BERTScore metric may be measuring different aspects than what the SPAR loop optimises for.")
 story += body(
     "<b>Limitations of this run.</b> "
     "The primary KD metric (Jaccard token overlap) is a surface-level proxy "

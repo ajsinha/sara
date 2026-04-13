@@ -1,0 +1,209 @@
+Object-Oriented Python: Classes, Inheritance, and Design Patterns
+
+Object-oriented programming in Python uses classes to encapsulate data and behavior.
+Well-designed classes make complex systems easier to understand, test, and extend.
+
+Class Fundamentals
+
+    from abc import ABC, abstractmethod
+    from typing import Any
+
+    class BaseScorer(ABC):
+        """Abstract base class for KD scoring implementations.
+
+        All scorers must implement the score() method. This enables
+        swapping scoring strategies without changing the experiment code.
+        """
+
+        def __init__(self, name: str):
+            self.name = name
+            self._call_count = 0
+
+        @abstractmethod
+        def score(self, student: str, teacher: str) -> float:
+            """Compute similarity between student and teacher outputs.
+
+            Args:
+                student: Student model's generated text.
+                teacher: Teacher model's reference text.
+
+            Returns:
+                Float in [0, 1] where 1 means perfect alignment.
+            """
+            ...
+
+        def batch_score(self, pairs: list[tuple[str, str]]) -> list[float]:
+            """Score multiple pairs. Subclasses can override for efficiency."""
+            return [self.score(s, t) for s, t in pairs]
+
+        def __repr__(self) -> str:
+            return f"{self.__class__.__name__}(name='{self.name}', calls={self._call_count})"
+
+Concrete Implementations
+
+    class JaccardScorer(BaseScorer):
+        """Token-overlap scoring using Jaccard similarity."""
+
+        def __init__(self):
+            super().__init__(name="jaccard")
+
+        def score(self, student: str, teacher: str) -> float:
+            self._call_count += 1
+            s_tokens = set(student.lower().split())
+            t_tokens = set(teacher.lower().split())
+            union = s_tokens | t_tokens
+            if not union:
+                return 0.0
+            return len(s_tokens & t_tokens) / len(union)
+
+    class BERTScorer(BaseScorer):
+        """Semantic similarity scoring using BERTScore."""
+
+        def __init__(self, model_name: str = "microsoft/deberta-xlarge-mnli"):
+            super().__init__(name="bertscore")
+            self.model_name = model_name
+            self._scorer = None  # lazy initialization
+
+        def _ensure_loaded(self):
+            if self._scorer is None:
+                from bert_score import BERTScorer as _BS
+                self._scorer = _BS(model_type=self.model_name, lang="en")
+
+        def score(self, student: str, teacher: str) -> float:
+            self._call_count += 1
+            self._ensure_loaded()
+            P, R, F1 = self._scorer.score([student], [teacher])
+            return F1.item()
+
+        def batch_score(self, pairs: list[tuple[str, str]]) -> list[float]:
+            """Override for efficient batched BERTScore computation."""
+            self._ensure_loaded()
+            students = [s for s, _ in pairs]
+            teachers = [t for _, t in pairs]
+            _, _, F1 = self._scorer.score(students, teachers)
+            self._call_count += len(pairs)
+            return F1.tolist()
+
+Composition and Dependency Injection
+
+    class ExperimentRunner:
+        """Orchestrates a KD-SPAR ablation experiment.
+
+        Uses dependency injection for scorer and model client,
+        making the runner testable with mock implementations.
+        """
+
+        def __init__(self, scorer: BaseScorer, client: Any,
+                     corpus: dict[str, str], iterations: int = 5):
+            self.scorer = scorer
+            self.client = client
+            self.corpus = corpus
+            self.iterations = iterations
+            self._results: list[dict] = []
+
+        def run_condition(self, condition: str, queries: list[str],
+                          system_prompt: str) -> dict:
+            """Run a single experimental condition."""
+            scores = []
+            for query in queries:
+                teacher_resp = self.client.generate(
+                    query, model="teacher", system=system_prompt
+                )
+                student_resp = self.client.generate(
+                    query, model="student", system=system_prompt
+                )
+                score = self.scorer.score(student_resp, teacher_resp)
+                scores.append(score)
+
+            result = {
+                "condition": condition,
+                "mean_score": sum(scores) / len(scores) if scores else 0,
+                "scores": scores,
+                "n_queries": len(queries),
+            }
+            self._results.append(result)
+            return result
+
+        @property
+        def results(self) -> list[dict]:
+            return list(self._results)
+
+The Strategy Pattern
+
+    class PromptStrategy(ABC):
+        """Strategy for generating prompt improvement proposals."""
+
+        @abstractmethod
+        def propose(self, failures: list[dict], current_prompt: str) -> list[str]:
+            """Generate candidate instructions based on failure analysis."""
+            ...
+
+    class SelfInterviewStrategy(PromptStrategy):
+        """KD-SPAR: student proposes its own improvements."""
+
+        def __init__(self, client: Any, model: str):
+            self.client = client
+            self.model = model
+
+        def propose(self, failures: list[dict], current_prompt: str) -> list[str]:
+            proposals = []
+            for failure in failures:
+                prompt = (
+                    f"You produced: {failure['student_output']}\n"
+                    f"Target was: {failure['teacher_output']}\n"
+                    f"Failure: {failure['category']}\n"
+                    f"What single instruction would prevent this?"
+                )
+                instruction = self.client.generate(prompt, model=self.model)
+                proposals.append(instruction.strip())
+            return proposals
+
+    class ExternalProposalStrategy(PromptStrategy):
+        """Condition B: teacher proposes on behalf of student."""
+
+        def __init__(self, client: Any, teacher_model: str):
+            self.client = client
+            self.teacher_model = teacher_model
+
+        def propose(self, failures: list[dict], current_prompt: str) -> list[str]:
+            proposals = []
+            for failure in failures:
+                prompt = (
+                    f"A student model produced: {failure['student_output']}\n"
+                    f"The target was: {failure['teacher_output']}\n"
+                    f"Failure: {failure['category']}\n"
+                    f"What instruction should be added to the student's prompt?"
+                )
+                instruction = self.client.generate(prompt, model=self.teacher_model)
+                proposals.append(instruction.strip())
+            return proposals
+
+Property Decorators and Encapsulation
+
+    class PromptEvolution:
+        """Track the evolution of a system prompt across iterations."""
+
+        def __init__(self, initial_prompt: str):
+            self._history: list[tuple[str, float]] = [(initial_prompt, 0.0)]
+
+        def commit(self, prompt: str, score: float) -> bool:
+            """Accept new prompt only if score improves."""
+            if score > self.best_score:
+                self._history.append((prompt, score))
+                return True
+            return False
+
+        @property
+        def current_prompt(self) -> str:
+            return self._history[-1][0]
+
+        @property
+        def best_score(self) -> float:
+            return max(score for _, score in self._history)
+
+        @property
+        def n_iterations(self) -> int:
+            return len(self._history) - 1
+
+        def __len__(self) -> int:
+            return len(self._history)

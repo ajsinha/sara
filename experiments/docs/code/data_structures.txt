@@ -1,0 +1,122 @@
+Python Data Structures: Built-in Types and Collections
+
+Python's data structures form the foundation of efficient program design. Understanding
+their time complexity, mutability, and appropriate use cases is essential for writing
+performant code.
+
+Lists, Tuples, and Sequences
+
+Lists are ordered, mutable sequences with O(1) append and O(n) insert/delete:
+
+    # List operations and their complexities
+    scores = [0.72, 0.85, 0.91, 0.68, 0.77]
+    scores.append(0.88)           # O(1) amortized
+    scores.insert(0, 0.50)        # O(n) — shifts all elements
+    scores.pop()                  # O(1) — removes last
+    scores.pop(0)                 # O(n) — shifts all elements
+    best = max(scores)            # O(n)
+    idx = scores.index(0.91)      # O(n)
+
+    # List comprehensions — preferred over map/filter
+    high_scores = [s for s in scores if s > 0.75]
+    doubled = [s * 2 for s in scores]
+    pairs = [(i, s) for i, s in enumerate(scores)]
+
+    # Nested comprehensions for matrix operations
+    matrix = [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
+    flattened = [x for row in matrix for x in row]
+    transposed = [[row[i] for row in matrix] for i in range(len(matrix[0]))]
+
+Tuples are immutable sequences, useful for fixed records and dict keys:
+
+    ModelConfig = tuple[str, str, int]  # type alias
+    config: ModelConfig = ("llama3.1:8b", "llama3.2:3b", 42)
+    teacher, student, seed = config     # tuple unpacking
+
+Dictionaries and Sets
+
+Dicts provide O(1) average-case lookup, insertion, and deletion via hash tables:
+
+    results = {
+        "baseline": {"kd_score": 0.672, "citation": 0.900},
+        "kd_spar":  {"kd_score": 0.724, "citation": 1.000},
+        "enhanced": {"kd_score": 0.748, "citation": 1.000},
+    }
+
+    # Safe access with .get()
+    score = results.get("missing_key", {}).get("kd_score", 0.0)
+
+    # Dict comprehension
+    improvements = {
+        name: data["kd_score"] - results["baseline"]["kd_score"]
+        for name, data in results.items()
+        if name != "baseline"
+    }
+
+    # Merging dicts (Python 3.9+)
+    defaults = {"temperature": 0.0, "max_tokens": 512}
+    overrides = {"max_tokens": 1024, "seed": 42}
+    config = defaults | overrides  # {'temperature': 0.0, 'max_tokens': 1024, 'seed': 42}
+
+Sets provide O(1) membership testing and support mathematical set operations:
+
+    student_tokens = set("the student model generates text".split())
+    teacher_tokens = set("the teacher model produces text".split())
+
+    common = student_tokens & teacher_tokens        # intersection
+    all_tokens = student_tokens | teacher_tokens     # union
+    student_only = student_tokens - teacher_tokens   # difference
+    jaccard = len(common) / len(all_tokens)          # Jaccard similarity
+
+Collections Module
+
+    from collections import defaultdict, Counter, deque, namedtuple
+
+    # defaultdict — automatic default values
+    failure_counts = defaultdict(int)
+    for failure in ["hallucination", "missing_citation", "hallucination", "over_hedging"]:
+        failure_counts[failure] += 1
+
+    # Counter — frequency counting
+    word_freq = Counter("the cat sat on the mat".split())
+    top_3 = word_freq.most_common(3)  # [('the', 2), ('cat', 1), ('sat', 1)]
+
+    # deque — efficient double-ended queue
+    recent_scores = deque(maxlen=10)  # automatically drops oldest when full
+    recent_scores.append(0.85)
+    recent_scores.appendleft(0.72)
+
+    # namedtuple — lightweight immutable records
+    Result = namedtuple("Result", ["condition", "kd_score", "citation", "seed"])
+    r = Result("A", 0.724, 1.000, 42)
+    print(f"Condition {r.condition}: {r.kd_score}")
+
+Dataclasses
+
+    from dataclasses import dataclass, field
+
+    @dataclass
+    class ExperimentResult:
+        condition: str
+        kd_score: float
+        citation_fidelity: float
+        seed: int
+        model: str = "llama3.2:3b"
+        metadata: dict = field(default_factory=dict)
+
+        @property
+        def improvement(self) -> float:
+            return self.kd_score - 0.672  # delta vs baseline
+
+        def __post_init__(self):
+            if not 0 <= self.kd_score <= 1:
+                raise ValueError(f"kd_score must be in [0,1], got {self.kd_score}")
+
+    @dataclass(frozen=True)
+    class ModelPair:
+        """Immutable and hashable — can be used as dict key or set element."""
+        teacher: str
+        student: str
+
+    pair = ModelPair("llama3.1:8b", "llama3.2:3b")
+    experiment_cache = {pair: [0.72, 0.75, 0.71]}  # hashable key

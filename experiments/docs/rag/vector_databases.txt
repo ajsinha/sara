@@ -1,0 +1,81 @@
+Vector Databases: Storage, Indexing, and Retrieval for AI Applications
+
+Vector databases store high-dimensional embeddings and support approximate nearest neighbour
+(ANN) search, enabling semantic similarity queries that traditional keyword-based databases
+cannot handle. They are the backbone of RAG systems, recommendation engines, and image
+search applications.
+
+Embedding Models
+
+Text embedding models convert natural language into dense vectors that capture semantic
+meaning. Similar texts map to nearby points in the embedding space, enabling similarity
+search via cosine distance or inner product. The choice of embedding model directly impacts
+retrieval quality.
+
+all-MiniLM-L6-v2 produces 384-dimensional vectors and is optimised for speed. It processes
+approximately 14,000 sentences per second on a single GPU and provides good quality for
+general-purpose semantic search. all-mpnet-base-v2 produces 768-dimensional vectors with
+better semantic discrimination, especially for technical and domain-specific text, but
+at approximately 2,800 sentences per second. For RAG applications, the higher quality of
+MPNet usually justifies the speed trade-off since embedding is done once during ingestion.
+
+Instructor-large and E5-large-v2 represent the current state of the art for text embeddings,
+producing 1024-dimensional vectors with strong performance across diverse domains. These
+models accept task-specific prefixes (e.g., "Represent the document for retrieval:") that
+improve embedding quality for the intended use case.
+
+Index Types and Trade-offs
+
+Flat (Exact) Index: Stores all vectors and computes exact distances to every vector at query
+time. Guarantees perfect recall but scales linearly with collection size — impractical for
+collections larger than approximately 100,000 vectors.
+
+IVF (Inverted File) Index: Partitions vectors into clusters using k-means, then only
+searches the nearest clusters at query time. The nprobe parameter controls how many
+clusters to search — higher values improve recall at the cost of latency. Typical
+configurations use 100-1000 clusters with nprobe=10-50.
+
+HNSW (Hierarchical Navigable Small World): Builds a multi-layer graph where each node
+connects to its approximate nearest neighbours. Query traversal starts at the top layer
+(coarse granularity) and descends to lower layers (fine granularity). HNSW provides
+excellent recall (>95%) at sub-millisecond latency for collections up to tens of millions
+of vectors. The M parameter controls the number of connections per node (higher M = better
+recall, more memory). This is the default index type for most production RAG applications.
+
+Product Quantisation (PQ) compresses vectors by splitting them into sub-vectors and
+quantising each sub-vector independently. This reduces memory usage by 4-8x with moderate
+recall degradation. Combining HNSW with PQ (HNSW+PQ) enables billion-scale collections on
+a single machine.
+
+Vector Database Systems
+
+ChromaDB is an open-source embedding database designed for AI applications, supporting both
+in-memory and persistent storage. It provides a simple Python API, automatic embedding
+generation, and metadata filtering. ChromaDB uses HNSW indexing internally and is the default
+choice for prototyping RAG systems. Limitations include single-node deployment and limited
+support for concurrent writes.
+
+FAISS (Facebook AI Similarity Search) is a library rather than a database — it provides
+GPU-accelerated ANN algorithms but no built-in persistence, metadata filtering, or API
+server. FAISS is the performance baseline against which other systems are measured,
+supporting flat, IVF, HNSW, and PQ indices with seamless GPU offloading. It is typically
+used as a component within larger systems rather than as a standalone solution.
+
+Pinecone is a managed vector database service that handles infrastructure, scaling, and
+index management automatically. It supports metadata filtering, namespace isolation, and
+real-time updates. The trade-off is vendor lock-in and per-query pricing that can become
+expensive at scale.
+
+Weaviate adds hybrid search combining dense vectors with BM25 keyword matching, providing
+the best of both semantic and lexical retrieval. It also supports generative search, where
+retrieved results are automatically passed to an LLM for synthesis.
+
+Chunking Strategy
+
+How documents are split into chunks dramatically affects retrieval quality. Fixed-size
+chunking (e.g., 512 tokens with 50-token overlap) is simple but can split sentences and
+ideas mid-thought. Semantic chunking splits at natural boundaries (paragraphs, sections,
+topic shifts) to keep coherent ideas together. Recursive chunking starts with large chunks
+and recursively splits only those that exceed the size limit, using progressively finer
+separators (sections, paragraphs, sentences). For technical documents, a chunk size of
+256-512 tokens with 10-20% overlap provides a good balance between granularity and context.

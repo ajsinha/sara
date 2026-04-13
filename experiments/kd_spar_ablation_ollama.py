@@ -1,5 +1,5 @@
 # Copyright (C) 2025 Ashutosh Sinha (ajsinha@gmail.com)
-# Sara (सार) — Knowledge Distillation and KD-SPAR Toolkit  v1.7.0
+# Sara (सार) — Knowledge Distillation and KD-SPAR Toolkit  v1.8.3
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # https://github.com/ajsinha/sara
 """
@@ -113,13 +113,45 @@ RESULTS_DIR.mkdir(exist_ok=True)
 
 OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
 
+# ── Corpus loader ──────────────────────────────────────────────────────────
+CORPUS_DIR = Path(__file__).parent / "docs"
+
+def load_corpus(domain: str = "rag") -> dict[str, str]:
+    """Load corpus documents from experiments/corpus/<domain>/*.txt.
+
+    Falls back to inline CORPUS/CODE_CORPUS dicts if files not found.
+    """
+    corpus_path = CORPUS_DIR / domain
+    if corpus_path.exists():
+        loaded = {}
+        for p in sorted(corpus_path.glob("*.txt")):
+            text = p.read_text().strip()
+            if text:
+                loaded[p.name] = text
+        if loaded:
+            print(f"  Corpus loaded from {corpus_path}: {len(loaded)} documents "
+                  f"({sum(len(t) for t in loaded.values())} chars)")
+            return loaded
+    # Fallback to inline
+    print(f"  Corpus: using inline {domain.upper()} documents (files not found at {corpus_path})")
+    return _CORPUS_RAG if domain == "rag" else _CORPUS_CODE
+
 # ── Model configs ──────────────────────────────────────────────────────────
 MODEL_CONFIGS = {
-    1: {"teacher": "llama3.1:8b",  "student": "llama3.2:3b",  "label": "llama8b→llama3b"},
-    2: {"teacher": "qwen2.5:7b",   "student": "llama3.2:3b",  "label": "qwen7b→llama3b"},
-    3: {"teacher": "llama3.1:8b",  "student": "qwen2.5:3b",   "label": "llama8b→qwen3b"},
-    4: {"teacher": "qwen2.5:14b",  "student": "llama3.1:8b",  "label": "qwen14b→llama8b"},   # 8B student — tests capacity ceiling
-    5: {"teacher": "qwen2.5:14b",  "student": "qwen2.5:7b",   "label": "qwen14b→qwen7b"},    # 7B student — same family large
+    # Primary experiments — constant teacher (llama3.1:8b), 7 student architectures
+    1:  {"teacher": "llama3.1:8b",  "student": "llama3.2:3b",    "label": "llama8b→llama3b"},
+    2:  {"teacher": "llama3.1:8b",  "student": "qwen2.5:3b",     "label": "llama8b→qwen3b"},
+    3:  {"teacher": "llama3.1:8b",  "student": "gemma2:2b",      "label": "llama8b→gemma2b"},
+    4:  {"teacher": "llama3.1:8b",  "student": "phi3:3.8b",      "label": "llama8b→phi3.8b"},
+    5:  {"teacher": "llama3.1:8b",  "student": "smollm2:1.7b",   "label": "llama8b→smollm1.7b"},
+    6:  {"teacher": "llama3.1:8b",  "student": "stablelm2:1.6b", "label": "llama8b→stablelm1.6b"},
+    7:  {"teacher": "llama3.1:8b",  "student": "tinyllama:1.1b", "label": "llama8b→tinyllama1.1b"},
+    # Cross-family teacher tests
+    8:  {"teacher": "qwen2.5:7b",   "student": "llama3.2:3b",    "label": "qwen7b→llama3b"},
+    9:  {"teacher": "qwen2.5:7b",   "student": "qwen2.5:3b",     "label": "qwen7b→qwen3b"},
+    # Larger student (capacity ceiling test) — needs more VRAM
+    10: {"teacher": "qwen2.5:14b",  "student": "llama3.1:8b",    "label": "qwen14b→llama8b"},
+    11: {"teacher": "qwen2.5:14b",  "student": "qwen2.5:7b",     "label": "qwen14b→qwen7b"},
 }
 
 # ── Random instruction pool ────────────────────────────────────────────────
@@ -159,81 +191,21 @@ Write exactly ONE instruction to add to the assistant's system prompt.
 Return ONLY the instruction text. No preamble, no quotes, no explanation.
 """
 
-# ── Corpus ────────────────────────────────────────────────────────────────
-CORPUS = {
-    "kd_foundations.txt": """
-        Knowledge distillation transfers knowledge from a large teacher model to a smaller
-        student model. Hinton et al. (2015) formalised this using temperature-scaled softmax
-        outputs as soft targets. The temperature parameter T controls the softness of the
-        distribution — higher T flattens it, revealing inter-class similarity called dark
-        knowledge. The combined distillation loss is: L = alpha * T^2 * KL(student || teacher)
-        + (1 - alpha) * CE(student, labels). The T-squared factor compensates for gradient
-        magnitude reduction. Feature-based distillation (FitNets) aligns intermediate layer
-        representations. Attention transfer distillation aligns spatial attention maps.
-        Relational KD distils pairwise structural relationships between samples.
-    """,
-    "rag_systems.txt": """
-        Retrieval-Augmented Generation (RAG) grounds language model responses in external
-        knowledge by retrieving relevant document passages at inference time. A RAG pipeline
-        has three phases: document ingestion (chunk, embed, store in vector database),
-        retrieval (semantic search over embeddings), and generation (LLM synthesises answer
-        from retrieved context). ChromaDB is a popular open-source vector database for RAG.
-        Citation format [Doc-N] traces claims to source passages. Good RAG responses cite
-        every claim with [Doc-N] notation and express uncertainty when context is partial.
-    """,
-    "kd_spar_method.txt": """
-        KD-SPAR (Knowledge Distillation via Student Prompt Auto-Rewriting) lets the student
-        model diagnose its own failure modes and propose targeted amendments to its own
-        system prompt. The algorithm has four phases: diagnostic pass (compare student to
-        teacher, classify failures), self-interview (student proposes one instruction per
-        failure mode), aggregation (cluster and score proposals), and validate-and-commit
-        (accept only if KD score improves). The self-knowledge hypothesis claims that the
-        student has privileged knowledge about what instructions will improve its own
-        performance, because the proposer and the executor are the same model.
-    """,
-    "local_models.txt": """
-        Llama 3.1 is a family of instruction-tuned models from Meta released in July 2024.
-        The 8B parameter version offers strong instruction following and reasoning at a
-        modest footprint (~4.7 GB in Q4 quantisation). Llama 3.2 includes a 3B parameter
-        model designed for on-device and edge deployment, achieving strong performance at
-        ~2 GB. Qwen 2.5 from Alibaba offers 7B and 3B variants with excellent multilingual
-        capability and strong instruction adherence. Running these models locally via Ollama
-        requires no API key and provides full reproducibility.
-    """,
+# ── Corpus — loaded from experiments/docs/rag/*.txt ─────────────────────
+# The file-based loader (load_corpus) is the primary path.
+# These inline dicts are minimal fallbacks for environments without the files.
+_CORPUS_RAG = {
+    "kd_foundations.txt": "Knowledge distillation transfers knowledge from a large teacher model to a smaller student model using temperature-scaled softmax outputs as soft targets. The distillation loss combines KL divergence on softened distributions with cross-entropy on hard labels. The T-squared factor corrects gradient magnitudes.",
+    "rag_systems.txt": "Retrieval-Augmented Generation grounds LLM responses in external knowledge through three phases: document ingestion, retrieval via semantic search, and generation with citations. Citation format uses [Doc-N] notation. Faithfulness measures whether claims are grounded in retrieved passages.",
+    "kd_spar_method.txt": "KD-SPAR lets the student model diagnose its own failure modes and propose targeted amendments to its own system prompt. The four phases are diagnostic pass, self-interview, aggregation, and validate-and-commit. The self-knowledge hypothesis claims the student has privileged knowledge about what instructions will improve its own performance.",
+    "local_models.txt": "Llama 3.1 8B offers strong instruction following at 4.7 GB in Q4 quantisation. Llama 3.2 3B targets edge deployment at 2 GB. Qwen 2.5 provides excellent multilingual capability. Running locally via Ollama requires no API key and provides full reproducibility.",
 }
-
-# ── Code generation domain corpus (Item 3: cross-domain test) ──────────────
-CODE_CORPUS = {
-    "python_basics.txt": """
-        Python is a high-level, dynamically typed language. Functions are defined with 'def',
-        classes with 'class'. List comprehensions [expr for x in iterable if cond] are preferred
-        over map/filter. The 'with' statement handles resource management (context managers).
-        Type hints (def func(x: int) -> str) improve readability. F-strings f'value={x}'
-        are the standard for string formatting. The walrus operator := assigns inside expressions.
-    """,
-    "data_structures.txt": """
-        Python's built-in data structures: list (ordered, mutable), tuple (ordered, immutable),
-        dict (key-value, O(1) lookup), set (unordered, unique elements). Collections module adds
-        defaultdict, Counter, deque, namedtuple. For sorted data, use bisect module. heapq provides
-        a min-heap. dataclasses (from dataclasses import dataclass) reduce boilerplate for data
-        containers. Frozen dataclasses are hashable and can be used as dict keys or set elements.
-    """,
-    "algorithms.txt": """
-        Common algorithm patterns: two pointers (sorted array problems), sliding window (subarray
-        problems), binary search (O(log n) on sorted data), BFS/DFS (graph traversal), dynamic
-        programming (overlapping subproblems + optimal substructure), backtracking (constraint
-        satisfaction). Time complexity notation: O(1) constant, O(n) linear, O(n log n)
-        linearithmic, O(n²) quadratic. Space complexity matters for large inputs. Python's
-        sorted() uses Timsort (O(n log n) average and worst case, stable).
-    """,
-    "testing_patterns.txt": """
-        Python testing with pytest: test functions start with test_. Fixtures provide reusable
-        setup (@pytest.fixture). Parametrize runs the same test with multiple inputs
-        (@pytest.mark.parametrize). Mock external dependencies with unittest.mock.patch.
-        Assert with plain assert statements. Coverage: pytest-cov measures line and branch
-        coverage. Test-driven development (TDD): write failing test first, then implement.
-        Property-based testing with hypothesis generates random inputs to find edge cases.
-    """,
+# ── Code domain corpus — loaded from experiments/docs/code/*.txt ─────────
+_CORPUS_CODE = {
+    "functions_and_closures.txt": "Python functions are first-class objects. Closures capture variables from enclosing scope. Decorators wrap functions to add behavior. Lambda functions enable inline anonymous functions. List comprehensions are preferred over map/filter for readability.",
+    "data_structures.txt": "Python built-in types: list (ordered mutable), tuple (immutable), dict (O(1) lookup), set (unique elements). Collections module adds defaultdict, Counter, deque, namedtuple. Dataclasses reduce boilerplate for data containers.",
+    "algorithms.txt": "Common patterns: two pointers, sliding window, binary search, BFS/DFS, dynamic programming, backtracking. Python sorted() uses Timsort O(n log n). bisect provides binary search on sorted data. heapq provides min-heap operations.",
+    "testing_and_pytest.txt": "pytest test functions start with test_. Fixtures provide reusable setup. Parametrize runs tests with multiple inputs. Mock external dependencies with unittest.mock.patch. Coverage measured with pytest-cov. TDD: write failing test first.",
 }
 
 CODE_TRAIN_QUERIES = [
@@ -306,6 +278,21 @@ VAL_QUERIES = [
     "What is dark knowledge in KD?",
     "How does KD-SPAR's self-knowledge differ from Constitutional AI?",
     "What makes Llama 3.2 3B suitable as a student model?",
+    "How does the Transformer self-attention mechanism work?",
+    "What is the difference between LoRA and full fine-tuning?",
+    "How does BERTScore differ from BLEU as an evaluation metric?",
+    "What is the purpose of chunking in a vector database?",
+    "How does Constitutional AI use self-critique for alignment?",
+    "What is quantisation-aware training and why is it useful?",
+    "How does DeepSpeed ZeRO reduce memory requirements?",
+    "What are the advantages of few-shot prompting over zero-shot?",
+    "How does FAISS differ from ChromaDB for vector search?",
+    "What is the lottery ticket hypothesis in model compression?",
+    "How does the temperature parameter affect generation diversity?",
+    "What is the difference between data parallelism and tensor parallelism?",
+    "How does RLHF align models with human preferences?",
+    "What is faithfulness grounding in RAG evaluation?",
+    "How does prefix tuning differ from prompt tuning?",
 ]
 
 
@@ -462,9 +449,11 @@ def build_B(
         if new_sc > old_sc + 0.003:
             current = candidate
             log.result("B", new_sc, new_sc - old_sc, 0.0, accepted=True)
+            print(f"[SARA_ITER] condition=B iter={it+1}/{iterations} ACCEPTED delta={new_sc - old_sc:+.4f}", flush=True)
         else:
             student_pipe.client.update_system(current)
             log.result("B", new_sc, new_sc - old_sc, 0.0, accepted=False)
+            print(f"[SARA_ITER] condition=B iter={it+1}/{iterations} REVERTED delta={new_sc - old_sc:+.4f}", flush=True)
 
     return current
 
@@ -623,7 +612,7 @@ def run_ablation(
 ) -> tuple[list[AblationResult], dict]:
     from sara.core.progress import SaraLogger, Heartbeat, _fmt_elapsed
 
-    _corpus = corpus or CORPUS
+    _corpus = corpus or _CORPUS_RAG
     _train  = train_queries or TRAIN_QUERIES
     _val    = val_queries or VAL_QUERIES
 
@@ -685,7 +674,7 @@ def run_ablation(
          (teacher_model, student_model, train_q, val_q, t_resps, store, iterations)),
     ]
 
-    for cond_label, description, fn, args in cond_defs:
+    for ci, (cond_label, description, fn, args) in enumerate(cond_defs, 1):
         log.section(f"Condition {cond_label} — {description}")
         t0 = time.time()
         prompt  = fn(*args)
@@ -703,6 +692,11 @@ def run_ablation(
             f"hedge={metrics['hedge_match']:.3f}",
             f"{_fmt_elapsed(elapsed)}"
         )
+        # Structured progress line for master script parsing
+        print(f"[SARA_EVAL] {ci}/6 condition={cond_label} "
+              f"kd={metrics['mean_kd_score']:.4f} "
+              f"citation={metrics['citation_fidelity']:.3f} "
+              f"elapsed={elapsed:.0f}s", flush=True)
 
     log.stop_heartbeat()
     return results, t_resps
@@ -828,7 +822,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="KD-SPAR Ablation — Local Ollama Models"
     )
-    parser.add_argument("--config", type=int, choices=[1,2,3,4,5], default=1,
+    parser.add_argument("--config", type=int, choices=list(range(1,12)), default=1,
                         help="Model config: 1=llama8b→llama3b, 2=qwen7b→llama3b, 3=llama8b→qwen3b")
     parser.add_argument("--teacher", type=str, default=None,
                         help="Override teacher model (e.g. llama3.1:8b)")
@@ -877,13 +871,13 @@ if __name__ == "__main__":
     # Run
     # Select domain
     if args.domain == "code":
-        corpus_d = CODE_CORPUS
+        corpus_d = load_corpus("code")
         train_d  = CODE_TRAIN_QUERIES
         val_d    = CODE_VAL_QUERIES
         label    = f"code_{label}"
         print(f"Domain: CODE GENERATION ({len(train_d)} train, {len(val_d)} val)")
     else:
-        corpus_d = CORPUS
+        corpus_d = load_corpus("rag")
         train_d  = TRAIN_QUERIES
         val_d    = VAL_QUERIES
         print(f"Domain: RAG QA ({len(train_d)} train, {len(val_d)} val)")

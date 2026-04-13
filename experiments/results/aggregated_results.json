@@ -1,7 +1,757 @@
 {
-  "generated_at": "2026-04-06T21:49:24.392375+00:00",
-  "n_total_runs": 10,
+  "generated_at": "2026-04-12T15:54:27.719134+00:00",
+  "n_total_runs": 28,
   "configs": [
+    {
+      "config_label": "custom_phi3_3.8b_gemma2_2b",
+      "teacher": "phi3:3.8b",
+      "student": "gemma2:2b",
+      "n_seeds": 3,
+      "conditions": {
+        "D": {
+          "condition": "D",
+          "description": "Baseline (no tuning)",
+          "n_runs": 3,
+          "mean_kd": 0.6535,
+          "std_kd": 0.0,
+          "mean_citation": 0.92,
+          "std_citation": 0.0,
+          "mean_hedge": 0.02,
+          "std_hedge": 0.0,
+          "all_kd_scores": [
+            0.6535,
+            0.6535,
+            0.6535
+          ],
+          "configs_seen": [
+            "custom_phi3_3.8b_gemma2_2b"
+          ]
+        },
+        "C": {
+          "condition": "C",
+          "description": "Random instructions",
+          "n_runs": 3,
+          "mean_kd": 0.5801,
+          "std_kd": 0.1174,
+          "mean_citation": 0.5333,
+          "std_citation": 0.4086,
+          "mean_hedge": 2.7,
+          "std_hedge": 2.3213,
+          "all_kd_scores": [
+            0.5135,
+            0.7157,
+            0.5111
+          ],
+          "configs_seen": [
+            "custom_phi3_3.8b_gemma2_2b"
+          ]
+        },
+        "B": {
+          "condition": "B",
+          "description": "External-proposed",
+          "n_runs": 3,
+          "mean_kd": 0.7288,
+          "std_kd": 0.0084,
+          "mean_citation": 0.9867,
+          "std_citation": 0.0231,
+          "mean_hedge": 10.6933,
+          "std_hedge": 10.0956,
+          "all_kd_scores": [
+            0.7198,
+            0.73,
+            0.7365
+          ],
+          "configs_seen": [
+            "custom_phi3_3.8b_gemma2_2b"
+          ]
+        },
+        "A": {
+          "condition": "A",
+          "description": "KD-SPAR (self-proposed)",
+          "n_runs": 3,
+          "mean_kd": 0.7362,
+          "std_kd": 0.0184,
+          "mean_citation": 0.9867,
+          "std_citation": 0.0231,
+          "mean_hedge": 2.7067,
+          "std_hedge": 2.2748,
+          "all_kd_scores": [
+            0.7419,
+            0.7156,
+            0.7511
+          ],
+          "configs_seen": [
+            "custom_phi3_3.8b_gemma2_2b"
+          ]
+        },
+        "E": {
+          "condition": "E",
+          "description": "MetaKDSPAR (meta-prompted)",
+          "n_runs": 3,
+          "mean_kd": 0.6535,
+          "std_kd": 0.0,
+          "mean_citation": 0.92,
+          "std_citation": 0.0,
+          "mean_hedge": 0.02,
+          "std_hedge": 0.0,
+          "all_kd_scores": [
+            0.6535,
+            0.6535,
+            0.6535
+          ],
+          "configs_seen": [
+            "custom_phi3_3.8b_gemma2_2b"
+          ]
+        },
+        "F": {
+          "condition": "F",
+          "description": "Enhanced KD-SPAR (all improvements)",
+          "n_runs": 3,
+          "mean_kd": 0.6535,
+          "std_kd": 0.0,
+          "mean_citation": 0.92,
+          "std_citation": 0.0,
+          "mean_hedge": 0.02,
+          "std_hedge": 0.0,
+          "all_kd_scores": [
+            0.6535,
+            0.6535,
+            0.6535
+          ],
+          "configs_seen": [
+            "custom_phi3_3.8b_gemma2_2b"
+          ]
+        }
+      },
+      "ab_gap_mean": 0.0074,
+      "ab_gap_std": 0.0193,
+      "hypothesis_supported": true
+    },
+    {
+      "config_label": "custom_phi3_3.8b_llama3.2_3b",
+      "teacher": "phi3:3.8b",
+      "student": "llama3.2:3b",
+      "n_seeds": 3,
+      "conditions": {
+        "D": {
+          "condition": "D",
+          "description": "Baseline (no tuning)",
+          "n_runs": 3,
+          "mean_kd": 0.6762,
+          "std_kd": 0.0,
+          "mean_citation": 0.8,
+          "std_citation": 0.0,
+          "mean_hedge": 4.16,
+          "std_hedge": 0.0,
+          "all_kd_scores": [
+            0.6762,
+            0.6762,
+            0.6762
+          ],
+          "configs_seen": [
+            "custom_phi3_3.8b_llama3.2_3b"
+          ]
+        },
+        "C": {
+          "condition": "C",
+          "description": "Random instructions",
+          "n_runs": 3,
+          "mean_kd": 0.4871,
+          "std_kd": 0.0352,
+          "mean_citation": 0.1733,
+          "std_citation": 0.0611,
+          "mean_hedge": 13.4,
+          "std_hedge": 16.703,
+          "all_kd_scores": [
+            0.492,
+            0.5196,
+            0.4498
+          ],
+          "configs_seen": [
+            "custom_phi3_3.8b_llama3.2_3b"
+          ]
+        },
+        "B": {
+          "condition": "B",
+          "description": "External-proposed",
+          "n_runs": 3,
+          "mean_kd": 0.7141,
+          "std_kd": 0.0488,
+          "mean_citation": 0.84,
+          "std_citation": 0.1833,
+          "mean_hedge": 66.9467,
+          "std_hedge": 34.0408,
+          "all_kd_scores": [
+            0.6621,
+            0.7214,
+            0.7589
+          ],
+          "configs_seen": [
+            "custom_phi3_3.8b_llama3.2_3b"
+          ]
+        },
+        "A": {
+          "condition": "A",
+          "description": "KD-SPAR (self-proposed)",
+          "n_runs": 3,
+          "mean_kd": 0.7171,
+          "std_kd": 0.0218,
+          "mean_citation": 0.88,
+          "std_citation": 0.08,
+          "mean_hedge": 24.0533,
+          "std_hedge": 13.8853,
+          "all_kd_scores": [
+            0.7014,
+            0.742,
+            0.7078
+          ],
+          "configs_seen": [
+            "custom_phi3_3.8b_llama3.2_3b"
+          ]
+        },
+        "E": {
+          "condition": "E",
+          "description": "MetaKDSPAR (meta-prompted)",
+          "n_runs": 3,
+          "mean_kd": 0.6762,
+          "std_kd": 0.0,
+          "mean_citation": 0.8,
+          "std_citation": 0.0,
+          "mean_hedge": 4.16,
+          "std_hedge": 0.0,
+          "all_kd_scores": [
+            0.6762,
+            0.6762,
+            0.6762
+          ],
+          "configs_seen": [
+            "custom_phi3_3.8b_llama3.2_3b"
+          ]
+        },
+        "F": {
+          "condition": "F",
+          "description": "Enhanced KD-SPAR (all improvements)",
+          "n_runs": 3,
+          "mean_kd": 0.6507,
+          "std_kd": 0.0,
+          "mean_citation": 0.76,
+          "std_citation": 0.0,
+          "mean_hedge": 4.16,
+          "std_hedge": 0.0,
+          "all_kd_scores": [
+            0.6507,
+            0.6507,
+            0.6507
+          ],
+          "configs_seen": [
+            "custom_phi3_3.8b_llama3.2_3b"
+          ]
+        }
+      },
+      "ab_gap_mean": 0.0029,
+      "ab_gap_std": 0.0477,
+      "hypothesis_supported": true
+    },
+    {
+      "config_label": "custom_phi3_3.8b_qwen2.5_3b",
+      "teacher": "phi3:3.8b",
+      "student": "qwen2.5:3b",
+      "n_seeds": 3,
+      "conditions": {
+        "D": {
+          "condition": "D",
+          "description": "Baseline (no tuning)",
+          "n_runs": 3,
+          "mean_kd": 0.4846,
+          "std_kd": 0.001,
+          "mean_citation": 0.28,
+          "std_citation": 0.0,
+          "mean_hedge": 4.08,
+          "std_hedge": 0.0,
+          "all_kd_scores": [
+            0.4852,
+            0.4835,
+            0.4852
+          ],
+          "configs_seen": [
+            "custom_phi3_3.8b_qwen2.5_3b"
+          ]
+        },
+        "C": {
+          "condition": "C",
+          "description": "Random instructions",
+          "n_runs": 3,
+          "mean_kd": 0.5933,
+          "std_kd": 0.1192,
+          "mean_citation": 0.56,
+          "std_citation": 0.3816,
+          "mean_hedge": 5.3867,
+          "std_hedge": 4.613,
+          "all_kd_scores": [
+            0.6688,
+            0.6553,
+            0.4559
+          ],
+          "configs_seen": [
+            "custom_phi3_3.8b_qwen2.5_3b"
+          ]
+        },
+        "B": {
+          "condition": "B",
+          "description": "External-proposed",
+          "n_runs": 3,
+          "mean_kd": 0.6904,
+          "std_kd": 0.0254,
+          "mean_citation": 0.8933,
+          "std_citation": 0.0462,
+          "mean_hedge": 6.78,
+          "std_hedge": 2.3038,
+          "all_kd_scores": [
+            0.7002,
+            0.7094,
+            0.6615
+          ],
+          "configs_seen": [
+            "custom_phi3_3.8b_qwen2.5_3b"
+          ]
+        },
+        "A": {
+          "condition": "A",
+          "description": "KD-SPAR (self-proposed)",
+          "n_runs": 3,
+          "mean_kd": 0.6616,
+          "std_kd": 0.0066,
+          "mean_citation": 0.8667,
+          "std_citation": 0.0231,
+          "mean_hedge": 1.3733,
+          "std_hedge": 2.3441,
+          "all_kd_scores": [
+            0.6608,
+            0.6686,
+            0.6554
+          ],
+          "configs_seen": [
+            "custom_phi3_3.8b_qwen2.5_3b"
+          ]
+        },
+        "E": {
+          "condition": "E",
+          "description": "MetaKDSPAR (meta-prompted)",
+          "n_runs": 3,
+          "mean_kd": 0.4844,
+          "std_kd": 0.0,
+          "mean_citation": 0.28,
+          "std_citation": 0.0,
+          "mean_hedge": 4.08,
+          "std_hedge": 0.0,
+          "all_kd_scores": [
+            0.4844,
+            0.4844,
+            0.4844
+          ],
+          "configs_seen": [
+            "custom_phi3_3.8b_qwen2.5_3b"
+          ]
+        },
+        "F": {
+          "condition": "F",
+          "description": "Enhanced KD-SPAR (all improvements)",
+          "n_runs": 3,
+          "mean_kd": 0.4849,
+          "std_kd": 0.0,
+          "mean_citation": 0.28,
+          "std_citation": 0.0,
+          "mean_hedge": 4.08,
+          "std_hedge": 0.0,
+          "all_kd_scores": [
+            0.4849,
+            0.4849,
+            0.4849
+          ],
+          "configs_seen": [
+            "custom_phi3_3.8b_qwen2.5_3b"
+          ]
+        }
+      },
+      "ab_gap_mean": -0.0288,
+      "ab_gap_std": 0.0196,
+      "hypothesis_supported": false
+    },
+    {
+      "config_label": "custom_phi3_3.8b_smollm2_1.7b",
+      "teacher": "phi3:3.8b",
+      "student": "smollm2:1.7b",
+      "n_seeds": 3,
+      "conditions": {
+        "D": {
+          "condition": "D",
+          "description": "Baseline (no tuning)",
+          "n_runs": 3,
+          "mean_kd": 0.4259,
+          "std_kd": 0.0004,
+          "mean_citation": 0.08,
+          "std_citation": 0.0,
+          "mean_hedge": 0.02,
+          "std_hedge": 0.0,
+          "all_kd_scores": [
+            0.4257,
+            0.4256,
+            0.4263
+          ],
+          "configs_seen": [
+            "custom_phi3_3.8b_smollm2_1.7b"
+          ]
+        },
+        "C": {
+          "condition": "C",
+          "description": "Random instructions",
+          "n_runs": 3,
+          "mean_kd": 0.4712,
+          "std_kd": 0.0115,
+          "mean_citation": 0.1333,
+          "std_citation": 0.0462,
+          "mean_hedge": 5.38,
+          "std_hedge": 6.0686,
+          "all_kd_scores": [
+            0.4642,
+            0.4649,
+            0.4844
+          ],
+          "configs_seen": [
+            "custom_phi3_3.8b_smollm2_1.7b"
+          ]
+        },
+        "B": {
+          "condition": "B",
+          "description": "External-proposed",
+          "n_runs": 3,
+          "mean_kd": 0.5038,
+          "std_kd": 0.0307,
+          "mean_citation": 0.2267,
+          "std_citation": 0.0833,
+          "mean_hedge": 12.0733,
+          "std_hedge": 10.5566,
+          "all_kd_scores": [
+            0.5367,
+            0.476,
+            0.4986
+          ],
+          "configs_seen": [
+            "custom_phi3_3.8b_smollm2_1.7b"
+          ]
+        },
+        "A": {
+          "condition": "A",
+          "description": "KD-SPAR (self-proposed)",
+          "n_runs": 3,
+          "mean_kd": 0.4799,
+          "std_kd": 0.0133,
+          "mean_citation": 0.1467,
+          "std_citation": 0.0231,
+          "mean_hedge": 12.08,
+          "std_hedge": 4.0001,
+          "all_kd_scores": [
+            0.4865,
+            0.4886,
+            0.4646
+          ],
+          "configs_seen": [
+            "custom_phi3_3.8b_smollm2_1.7b"
+          ]
+        },
+        "E": {
+          "condition": "E",
+          "description": "MetaKDSPAR (meta-prompted)",
+          "n_runs": 3,
+          "mean_kd": 0.4258,
+          "std_kd": 0.0004,
+          "mean_citation": 0.08,
+          "std_citation": 0.0,
+          "mean_hedge": 0.02,
+          "std_hedge": 0.0,
+          "all_kd_scores": [
+            0.4256,
+            0.4256,
+            0.4263
+          ],
+          "configs_seen": [
+            "custom_phi3_3.8b_smollm2_1.7b"
+          ]
+        },
+        "F": {
+          "condition": "F",
+          "description": "Enhanced KD-SPAR (all improvements)",
+          "n_runs": 3,
+          "mean_kd": 0.4259,
+          "std_kd": 0.0004,
+          "mean_citation": 0.08,
+          "std_citation": 0.0,
+          "mean_hedge": 0.02,
+          "std_hedge": 0.0,
+          "all_kd_scores": [
+            0.4257,
+            0.4257,
+            0.4264
+          ],
+          "configs_seen": [
+            "custom_phi3_3.8b_smollm2_1.7b"
+          ]
+        }
+      },
+      "ab_gap_mean": -0.0239,
+      "ab_gap_std": 0.0326,
+      "hypothesis_supported": false
+    },
+    {
+      "config_label": "custom_phi3_3.8b_stablelm2_1.6b",
+      "teacher": "phi3:3.8b",
+      "student": "stablelm2:1.6b",
+      "n_seeds": 3,
+      "conditions": {
+        "D": {
+          "condition": "D",
+          "description": "Baseline (no tuning)",
+          "n_runs": 3,
+          "mean_kd": 0.6082,
+          "std_kd": 0.0014,
+          "mean_citation": 0.56,
+          "std_citation": 0.0,
+          "mean_hedge": 16.06,
+          "std_hedge": 0.0,
+          "all_kd_scores": [
+            0.609,
+            0.609,
+            0.6065
+          ],
+          "configs_seen": [
+            "custom_phi3_3.8b_stablelm2_1.6b"
+          ]
+        },
+        "C": {
+          "condition": "C",
+          "description": "Random instructions",
+          "n_runs": 3,
+          "mean_kd": 0.6112,
+          "std_kd": 0.0183,
+          "mean_citation": 0.5467,
+          "std_citation": 0.0611,
+          "mean_hedge": 9.5,
+          "std_hedge": 6.1341,
+          "all_kd_scores": [
+            0.5905,
+            0.6252,
+            0.618
+          ],
+          "configs_seen": [
+            "custom_phi3_3.8b_stablelm2_1.6b"
+          ]
+        },
+        "B": {
+          "condition": "B",
+          "description": "External-proposed",
+          "n_runs": 3,
+          "mean_kd": 0.6877,
+          "std_kd": 0.0465,
+          "mean_citation": 0.8667,
+          "std_citation": 0.1222,
+          "mean_hedge": 20.1267,
+          "std_hedge": 10.6513,
+          "all_kd_scores": [
+            0.6776,
+            0.647,
+            0.7384
+          ],
+          "configs_seen": [
+            "custom_phi3_3.8b_stablelm2_1.6b"
+          ]
+        },
+        "A": {
+          "condition": "A",
+          "description": "KD-SPAR (self-proposed)",
+          "n_runs": 3,
+          "mean_kd": 0.6291,
+          "std_kd": 0.0282,
+          "mean_citation": 0.68,
+          "std_citation": 0.1442,
+          "mean_hedge": 18.7867,
+          "std_hedge": 18.5445,
+          "all_kd_scores": [
+            0.6275,
+            0.6017,
+            0.6581
+          ],
+          "configs_seen": [
+            "custom_phi3_3.8b_stablelm2_1.6b"
+          ]
+        },
+        "E": {
+          "condition": "E",
+          "description": "MetaKDSPAR (meta-prompted)",
+          "n_runs": 3,
+          "mean_kd": 0.6105,
+          "std_kd": 0.0008,
+          "mean_citation": 0.56,
+          "std_citation": 0.0,
+          "mean_hedge": 16.06,
+          "std_hedge": 0.0,
+          "all_kd_scores": [
+            0.6114,
+            0.6101,
+            0.6099
+          ],
+          "configs_seen": [
+            "custom_phi3_3.8b_stablelm2_1.6b"
+          ]
+        },
+        "F": {
+          "condition": "F",
+          "description": "Enhanced KD-SPAR (all improvements)",
+          "n_runs": 3,
+          "mean_kd": 0.612,
+          "std_kd": 0.0009,
+          "mean_citation": 0.56,
+          "std_citation": 0.0,
+          "mean_hedge": 16.06,
+          "std_hedge": 0.0,
+          "all_kd_scores": [
+            0.6125,
+            0.6125,
+            0.611
+          ],
+          "configs_seen": [
+            "custom_phi3_3.8b_stablelm2_1.6b"
+          ]
+        }
+      },
+      "ab_gap_mean": -0.0586,
+      "ab_gap_std": 0.019,
+      "hypothesis_supported": false
+    },
+    {
+      "config_label": "custom_phi3_3.8b_tinyllama_1.1b",
+      "teacher": "phi3:3.8b",
+      "student": "tinyllama:1.1b",
+      "n_seeds": 3,
+      "conditions": {
+        "D": {
+          "condition": "D",
+          "description": "Baseline (no tuning)",
+          "n_runs": 3,
+          "mean_kd": 0.419,
+          "std_kd": 0.0085,
+          "mean_citation": 0.08,
+          "std_citation": 0.0,
+          "mean_hedge": 9.42,
+          "std_hedge": 4.6419,
+          "all_kd_scores": [
+            0.4288,
+            0.4141,
+            0.4141
+          ],
+          "configs_seen": [
+            "custom_phi3_3.8b_tinyllama_1.1b"
+          ]
+        },
+        "C": {
+          "condition": "C",
+          "description": "Random instructions",
+          "n_runs": 3,
+          "mean_kd": 0.4237,
+          "std_kd": 0.0067,
+          "mean_citation": 0.08,
+          "std_citation": 0.0,
+          "mean_hedge": 8.1133,
+          "std_hedge": 3.98,
+          "all_kd_scores": [
+            0.4253,
+            0.4163,
+            0.4294
+          ],
+          "configs_seen": [
+            "custom_phi3_3.8b_tinyllama_1.1b"
+          ]
+        },
+        "B": {
+          "condition": "B",
+          "description": "External-proposed",
+          "n_runs": 3,
+          "mean_kd": 0.4738,
+          "std_kd": 0.0058,
+          "mean_citation": 0.2533,
+          "std_citation": 0.0462,
+          "mean_hedge": 16.12,
+          "std_hedge": 3.99,
+          "all_kd_scores": [
+            0.4799,
+            0.4733,
+            0.4683
+          ],
+          "configs_seen": [
+            "custom_phi3_3.8b_tinyllama_1.1b"
+          ]
+        },
+        "A": {
+          "condition": "A",
+          "description": "KD-SPAR (self-proposed)",
+          "n_runs": 3,
+          "mean_kd": 0.4314,
+          "std_kd": 0.0052,
+          "mean_citation": 0.0933,
+          "std_citation": 0.0231,
+          "mean_hedge": 13.4133,
+          "std_hedge": 8.3459,
+          "all_kd_scores": [
+            0.4297,
+            0.4372,
+            0.4272
+          ],
+          "configs_seen": [
+            "custom_phi3_3.8b_tinyllama_1.1b"
+          ]
+        },
+        "E": {
+          "condition": "E",
+          "description": "MetaKDSPAR (meta-prompted)",
+          "n_runs": 3,
+          "mean_kd": 0.4287,
+          "std_kd": 0.0,
+          "mean_citation": 0.08,
+          "std_citation": 0.0,
+          "mean_hedge": 4.06,
+          "std_hedge": 0.0,
+          "all_kd_scores": [
+            0.4287,
+            0.4287,
+            0.4287
+          ],
+          "configs_seen": [
+            "custom_phi3_3.8b_tinyllama_1.1b"
+          ]
+        },
+        "F": {
+          "condition": "F",
+          "description": "Enhanced KD-SPAR (all improvements)",
+          "n_runs": 3,
+          "mean_kd": 0.4283,
+          "std_kd": 0.0,
+          "mean_citation": 0.08,
+          "std_citation": 0.0,
+          "mean_hedge": 4.06,
+          "std_hedge": 0.0,
+          "all_kd_scores": [
+            0.4283,
+            0.4283,
+            0.4283
+          ],
+          "configs_seen": [
+            "custom_phi3_3.8b_tinyllama_1.1b"
+          ]
+        }
+      },
+      "ab_gap_mean": -0.0425,
+      "ab_gap_std": 0.0071,
+      "hypothesis_supported": false
+    },
     {
       "config_label": "llama8b\u2192llama3b",
       "teacher": "llama3.1:8b",
@@ -277,8 +1027,26 @@
       "hypothesis_supported": false
     }
   ],
-  "overall_ab_gap": -0.0048,
+  "overall_ab_gap": -0.0171,
   "all_ab_gaps": [
+    0.0221,
+    -0.0144,
+    0.0146,
+    0.0393,
+    0.0206,
+    -0.0511,
+    -0.0394,
+    -0.0408,
+    -0.0061,
+    -0.0502,
+    0.0126,
+    -0.034,
+    -0.0501,
+    -0.0453,
+    -0.0803,
+    -0.0502,
+    -0.0361,
+    -0.0411,
     0.019,
     -0.0835,
     -0.019,
@@ -295,74 +1063,74 @@
     {
       "condition": "A",
       "description": "KD-SPAR (self-proposed)",
-      "kd_mean": 0.3619,
-      "kd_std": 0.5119,
-      "kd_str": "0.362 \u00b1 0.512",
-      "delta_vs_d": 0.0257,
-      "delta_str": "+0.026",
-      "cit_mean": 0.5,
-      "cit_std": 0.7071,
-      "cit_str": "0.500 \u00b1 0.707"
+      "kd_mean": 0.5474,
+      "kd_std": 0.2487,
+      "kd_str": "0.547 \u00b1 0.249",
+      "delta_vs_d": 0.0549,
+      "delta_str": "+0.055",
+      "cit_mean": 0.5817,
+      "cit_std": 0.4285,
+      "cit_str": "0.582 \u00b1 0.428"
     },
     {
       "condition": "B",
       "description": "External-proposed",
-      "kd_mean": 0.3668,
-      "kd_std": 0.5187,
-      "kd_str": "0.367 \u00b1 0.519",
-      "delta_vs_d": 0.0306,
-      "delta_str": "+0.031",
-      "cit_mean": 0.49,
-      "cit_std": 0.693,
-      "cit_str": "0.490 \u00b1 0.693"
+      "kd_mean": 0.5665,
+      "kd_std": 0.2506,
+      "kd_str": "0.567 \u00b1 0.251",
+      "delta_vs_d": 0.074,
+      "delta_str": "+0.074",
+      "cit_mean": 0.6308,
+      "cit_std": 0.4001,
+      "cit_str": "0.631 \u00b1 0.400"
     },
     {
       "condition": "C",
       "description": "Random instructions",
-      "kd_mean": 0.2712,
-      "kd_std": 0.3835,
-      "kd_str": "0.271 \u00b1 0.384",
-      "delta_vs_d": -0.065,
-      "delta_str": "-0.065",
-      "cit_mean": 0.41,
-      "cit_std": 0.5798,
-      "cit_str": "0.410 \u00b1 0.580"
+      "kd_mean": 0.4636,
+      "kd_std": 0.1984,
+      "kd_str": "0.464 \u00b1 0.198",
+      "delta_vs_d": -0.0288,
+      "delta_str": "-0.029",
+      "cit_mean": 0.3558,
+      "cit_std": 0.2953,
+      "cit_str": "0.356 \u00b1 0.295"
     },
     {
       "condition": "D",
       "description": "Baseline (no tuning)",
-      "kd_mean": 0.3362,
-      "kd_std": 0.4755,
-      "kd_str": "0.336 \u00b1 0.475",
+      "kd_mean": 0.4925,
+      "kd_std": 0.2261,
+      "kd_str": "0.492 \u00b1 0.226",
       "delta_vs_d": 0.0,
       "delta_str": "+0.000",
-      "cit_mean": 0.45,
-      "cit_std": 0.6364,
-      "cit_str": "0.450 \u00b1 0.636"
+      "cit_mean": 0.4525,
+      "cit_std": 0.3897,
+      "cit_str": "0.453 \u00b1 0.390"
     },
     {
       "condition": "E",
       "description": "MetaKDSPAR (meta-prompted)",
-      "kd_mean": 0.374,
-      "kd_std": 0.529,
-      "kd_str": "0.374 \u00b1 0.529",
-      "delta_vs_d": 0.0378,
-      "delta_str": "+0.038",
-      "cit_mean": 0.5,
-      "cit_std": 0.7071,
-      "cit_str": "0.500 \u00b1 0.707"
+      "kd_mean": 0.5034,
+      "kd_std": 0.2358,
+      "kd_str": "0.503 \u00b1 0.236",
+      "delta_vs_d": 0.0109,
+      "delta_str": "+0.011",
+      "cit_mean": 0.465,
+      "cit_std": 0.4073,
+      "cit_str": "0.465 \u00b1 0.407"
     },
     {
       "condition": "F",
       "description": "Enhanced KD-SPAR (all improvements)",
-      "kd_mean": 0.374,
-      "kd_std": 0.529,
-      "kd_str": "0.374 \u00b1 0.529",
-      "delta_vs_d": 0.0378,
-      "delta_str": "+0.038",
-      "cit_mean": 0.5,
-      "cit_std": 0.7071,
-      "cit_str": "0.500 \u00b1 0.707"
+      "kd_mean": 0.5004,
+      "kd_std": 0.2334,
+      "kd_str": "0.500 \u00b1 0.233",
+      "delta_vs_d": 0.008,
+      "delta_str": "+0.008",
+      "cit_mean": 0.46,
+      "cit_std": 0.4028,
+      "cit_str": "0.460 \u00b1 0.403"
     }
   ]
 }

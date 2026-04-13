@@ -1,0 +1,164 @@
+Python Concurrency: Threading, Asyncio, and Parallel Execution
+
+Python offers multiple concurrency models, each suited to different workload types.
+Understanding the GIL, thread pools, async/await, and multiprocessing enables efficient
+utilisation of system resources.
+
+The Global Interpreter Lock (GIL)
+
+CPython's GIL allows only one thread to execute Python bytecode at a time. This means
+threading does NOT provide parallelism for CPU-bound work — two threads computing scores
+will not run faster than one. However, the GIL is released during I/O operations (network
+requests, file reads, database queries), making threading effective for I/O-bound workloads
+like querying multiple Ollama models simultaneously.
+
+Threading for I/O-Bound Work
+
+    import concurrent.futures
+    import requests
+    from typing import Optional
+
+    def query_ollama(model: str, prompt: str, base_url: str = "http://localhost:11434") -> dict:
+        """Query a single Ollama model. Blocks on network I/O."""
+        response = requests.post(
+            f"{base_url}/api/generate",
+            json={"model": model, "prompt": prompt, "stream": False},
+            timeout=120,
+        )
+        response.raise_for_status()
+        return {"model": model, "response": response.json()["response"]}
+
+    def query_models_parallel(models: list[str], prompt: str,
+                               max_workers: int = 4) -> list[dict]:
+        """Query multiple models concurrently using a thread pool.
+
+        This is faster than sequential queries because the GIL is released
+        during the HTTP request (network I/O).
+        """
+        results = []
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+            future_to_model = {
+                executor.submit(query_ollama, model, prompt): model
+                for model in models
+            }
+            for future in concurrent.futures.as_completed(future_to_model):
+                model = future_to_model[future]
+                try:
+                    result = future.result(timeout=180)
+                    results.append(result)
+                except Exception as e:
+                    print(f"  {model} failed: {e}")
+                    results.append({"model": model, "response": "", "error": str(e)})
+        return results
+
+    # Usage: query teacher and student simultaneously
+    # responses = query_models_parallel(["llama3.1:8b", "llama3.2:3b"], "What is KD?")
+
+Asyncio for High-Concurrency I/O
+
+    import asyncio
+    import aiohttp
+
+    async def query_ollama_async(session: aiohttp.ClientSession, model: str,
+                                  prompt: str) -> dict:
+        """Non-blocking Ollama query using asyncio."""
+        async with session.post(
+            "http://localhost:11434/api/generate",
+            json={"model": model, "prompt": prompt, "stream": False},
+            timeout=aiohttp.ClientTimeout(total=120),
+        ) as response:
+            data = await response.json()
+            return {"model": model, "response": data["response"]}
+
+    async def run_validation_queries(model: str, queries: list[str]) -> list[dict]:
+        """Run all validation queries against a model concurrently."""
+        async with aiohttp.ClientSession() as session:
+            tasks = [query_ollama_async(session, model, q) for q in queries]
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+            return [
+                r if isinstance(r, dict) else {"error": str(r)}
+                for r in results
+            ]
+
+    # Usage:
+    # results = asyncio.run(run_validation_queries("llama3.2:3b", val_queries))
+
+Multiprocessing for CPU-Bound Work
+
+    from multiprocessing import Pool
+    from functools import partial
+
+    def compute_kd_score_pair(pair: tuple[str, str]) -> float:
+        """CPU-bound scoring — benefits from multiprocessing."""
+        student, teacher = pair
+        s_tokens = set(student.lower().split())
+        t_tokens = set(teacher.lower().split())
+        union = s_tokens | t_tokens
+        return len(s_tokens & t_tokens) / len(union) if union else 0.0
+
+    def batch_score_parallel(pairs: list[tuple[str, str]],
+                              n_workers: Optional[int] = None) -> list[float]:
+        """Score many student-teacher pairs using multiple CPU cores."""
+        with Pool(processes=n_workers) as pool:
+            scores = pool.map(compute_kd_score_pair, pairs)
+        return scores
+
+    # Process pool for running multiple seed experiments
+    def run_seed_experiment(seed: int, config: dict) -> dict:
+        """Run a single seed — called by the process pool."""
+        import random
+        random.seed(seed)
+        # ... run ablation with this seed
+        return {"seed": seed, "results": {}}
+
+    def run_all_seeds_parallel(seeds: list[int], config: dict) -> list[dict]:
+        """Run all seeds in parallel processes."""
+        func = partial(run_seed_experiment, config=config)
+        with Pool(processes=min(len(seeds), 4)) as pool:
+            return pool.map(func, seeds)
+
+Thread Safety and Synchronisation
+
+    import threading
+
+    class ThreadSafeCounter:
+        """Accumulate results from multiple threads safely."""
+        def __init__(self):
+            self._lock = threading.Lock()
+            self._counts: dict[str, int] = {}
+            self._scores: dict[str, list[float]] = {}
+
+        def record(self, condition: str, score: float) -> None:
+            with self._lock:
+                self._counts[condition] = self._counts.get(condition, 0) + 1
+                self._scores.setdefault(condition, []).append(score)
+
+        def summary(self) -> dict[str, dict]:
+            with self._lock:
+                return {
+                    cond: {
+                        "count": self._counts[cond],
+                        "mean": sum(scores) / len(scores),
+                        "scores": list(scores),
+                    }
+                    for cond, scores in self._scores.items()
+                }
+
+Rate Limiting and Backoff
+
+    import time
+    import random
+
+    def query_with_backoff(func, *args, max_retries: int = 5, **kwargs):
+        """Exponential backoff with jitter for rate-limited APIs."""
+        for attempt in range(max_retries):
+            try:
+                return func(*args, **kwargs)
+            except requests.exceptions.HTTPError as e:
+                if e.response.status_code == 429:  # rate limited
+                    wait = (2 ** attempt) + random.uniform(0, 1)
+                    print(f"  Rate limited, retrying in {wait:.1f}s...")
+                    time.sleep(wait)
+                else:
+                    raise
+        raise RuntimeError(f"Failed after {max_retries} retries")

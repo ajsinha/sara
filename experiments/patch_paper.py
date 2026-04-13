@@ -1,5 +1,5 @@
 # Copyright (C) 2025 Ashutosh Sinha (ajsinha@gmail.com)
-# Sara (सार) — Knowledge Distillation and KD-SPAR Toolkit  v1.7.0
+# Sara (सार) — Knowledge Distillation and KD-SPAR Toolkit  v1.8.3
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # https://github.com/ajsinha/sara
 """
@@ -307,6 +307,40 @@ def make_results_section(agg: dict) -> str:
     else:
         enhanced_comment = ""
 
+    # ── Build chart data for embedding ────────────────────────────────────
+    chart_labels = []
+    chart_cond_scores = {c: [] for c in ["D","C","B","A","E","F"]}
+    chart_ab_gaps = []
+    chart_ea_gaps = []
+    chart_fa_gaps = []
+    chart_fb_gaps = []
+    for cfg in configs:
+        conds = cfg.get("conditions", {})
+        if conds.get("D", {}).get("mean_kd", 0) == 0:
+            continue
+        student = cfg.get("student", "unknown")
+        chart_labels.append(student)
+        a_kd = conds.get("A", {}).get("mean_kd", 0)
+        b_kd = conds.get("B", {}).get("mean_kd", 0)
+        e_kd = conds.get("E", {}).get("mean_kd", 0)
+        f_kd = conds.get("F", {}).get("mean_kd", 0)
+        for c in ["D","C","B","A","E","F"]:
+            chart_cond_scores[c].append(round(conds.get(c, {}).get("mean_kd", 0), 4))
+        chart_ab_gaps.append(round(a_kd - b_kd, 4))
+        chart_ea_gaps.append(round(e_kd - a_kd, 4))
+        chart_fa_gaps.append(round(f_kd - a_kd, 4))
+        chart_fb_gaps.append(round(f_kd - b_kd, 4))
+
+    # Serialize for embedding in generated code
+    chart_labels_str = repr(chart_labels)
+    chart_cond_str = repr({k: v for k, v in chart_cond_scores.items() if any(x > 0 for x in v)})
+    chart_gaps_str = repr({
+        "A\\u2212B": chart_ab_gaps,
+        "E\\u2212A": chart_ea_gaps,
+        "F\\u2212A": chart_fa_gaps,
+        "F\\u2212B": chart_fb_gaps,
+    })
+
     return f'''
 # ======================================================================
 # SECTION 20 — EXPERIMENTAL RESULTS  (generated {gen_at} by patch_paper.py)
@@ -378,6 +412,17 @@ story += dtable(
     col_widths=[0.55*inch, 2.15*inch, 1.35*inch, 0.85*inch, 1.80*inch]
 )
 
+# ── Chart: Condition Performance ──────────────────────────────────────────
+try:
+    story += results_bar_chart(
+        {chart_labels_str},
+        {chart_cond_str},
+        title="KD Score by Condition and Student Model",
+        fig_num="20.1"
+    )
+except Exception:
+    pass  # charts are optional — skip if data insufficient
+
 story += h2("20.3  A\\u2212B Gap Analysis")
 story += body(
     "The A\\u2212B gap measures the pure value of self-authorship. Both "
@@ -395,6 +440,17 @@ story += body(
     "Overall mean A\\u2212B gap: <b>{gap:+.4f}</b> \\u00b1 {gap_std:.4f} "
     "(n={len(all_gaps)}, {gl})."
 )
+
+# ── Chart: Gap Analysis ───────────────────────────────────────────────────
+try:
+    story += results_gap_chart(
+        {chart_labels_str},
+        {chart_gaps_str},
+        title="A\\u2212B, E\\u2212A, F\\u2212A, and F\\u2212B Gaps by Student Model",
+        fig_num="20.2"
+    )
+except Exception:
+    pass
 
 story += h2("20.4  Statistical Analysis")
 story += body(

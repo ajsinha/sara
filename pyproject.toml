@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "sara"
-version = "1.7.0"
+version = "1.8.3"
 description = "Sara -- Knowledge Distillation and KD-SPAR Toolkit"
 authors = [{ name = "Ashutosh Sinha", email = "ajsinha@gmail.com" }]
 readme = "README.md"

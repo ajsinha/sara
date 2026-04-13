@@ -1,5 +1,5 @@
 # Sara (सार) Documentation
-**Version 1.7.0** · Copyright (C) 2025 Ashutosh Sinha · AGPL-3.0
+**Version 1.8.3** · Copyright (C) 2025 Ashutosh Sinha · AGPL-3.0
 
 ---
 
@@ -50,4 +50,4 @@ python experiments/patch_paper.py --output docs/paper/Sara_Knowledge_Distillatio
 ---
 
 *Sara (सार) — Sanskrit for "quintessence": the refined essence extracted from a larger whole.*  
-*v1.7.0 · Ashutosh Sinha · ajsinha@gmail.com · AGPL-3.0*
+*v1.8.3 · Ashutosh Sinha · ajsinha@gmail.com · AGPL-3.0*

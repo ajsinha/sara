@@ -1,0 +1,79 @@
+Prompt Engineering: Principles, Patterns, and Production Practices
+
+Effective prompt engineering for instruction-tuned LLMs follows several well-established
+principles, each grounded in how these models process and respond to natural language
+instructions. The system prompt is the single most impactful configuration choice for
+production LLM deployments — it defines the model's role, constraints, output format,
+and behavioral boundaries.
+
+System Prompts
+
+A system prompt sets the persistent context for all subsequent interactions. Unlike user
+messages, the system prompt is typically hidden from the end user and remains constant
+across a conversation. Effective system prompts specify: (1) the model's role and expertise
+domain, (2) output format requirements (JSON, markdown, citations), (3) behavioral
+constraints (what to refuse, when to hedge), and (4) quality criteria (thoroughness,
+conciseness, accuracy). The order of instructions matters — models tend to weight earlier
+instructions more heavily, so the most critical constraints should appear first.
+
+Few-Shot Prompting
+
+Including 2-5 example input-output pairs in the prompt demonstrates the desired response
+pattern more effectively than abstract instructions alone. Few-shot examples work best when
+they cover diverse cases (not just the easy ones), include edge cases the model might
+struggle with, and match the exact format expected in the output. The key limitation is
+context window consumption — each example uses tokens that could otherwise accommodate
+longer inputs or more retrieved context.
+
+Chain-of-Thought (CoT) Prompting
+
+Adding "Let's think step by step" or "Reason through this carefully before answering"
+triggers the model to decompose complex problems into intermediate reasoning steps. This
+dramatically improves accuracy on arithmetic, logic, and multi-hop reasoning tasks. The
+mechanism is thought to work because autoregressive generation builds on each previous
+token — explicit reasoning tokens provide a "scratchpad" that keeps intermediate results
+accessible. Zero-shot CoT (just adding the instruction) works well for larger models, but
+smaller models often need few-shot CoT examples showing the expected reasoning format.
+
+ReAct (Reasoning + Acting)
+
+ReAct interleaves reasoning traces with action steps in a loop: the model reasons about
+what information it needs, takes an action (e.g., search query, API call, tool use), observes
+the result, then reasons about the next step. This pattern is the foundation of most LLM
+agent frameworks. The key advantage over pure chain-of-thought is that the model can gather
+external information during reasoning rather than relying solely on parametric knowledge.
+
+Structured Output Prompting
+
+For programmatic consumption, prompts can request specific output formats: JSON objects
+with defined schemas, XML with named tags, or markdown with consistent heading structures.
+The most reliable approach is to provide the exact schema in the prompt and instruct the
+model to output only the structured content with no preamble or explanation. Some API
+providers offer JSON mode or structured output features that constrain the model's token
+generation to valid JSON syntax.
+
+Negative Prompting
+
+Specifying what the model should NOT do is often more effective than specifying what it
+should do. "Do not hallucinate — if you are unsure, say so explicitly" is clearer than
+"Be accurate." Negative constraints help because they draw attention to specific failure
+modes the model might otherwise exhibit. However, excessive negative prompting can make
+the model overly cautious, hedging on claims it could confidently make.
+
+Temperature and Sampling
+
+Temperature controls the randomness of token selection. At T=0, the model always selects the
+highest-probability token (greedy decoding), producing deterministic output. At T=0.7-1.0,
+the model samples from the distribution, introducing variety at the cost of consistency.
+For factual tasks (RAG, question answering), T=0 is standard. For creative tasks (writing,
+brainstorming), T=0.7-0.9 produces more diverse outputs. Top-p (nucleus sampling) truncates
+the distribution to the smallest set of tokens whose cumulative probability exceeds p,
+providing an adaptive alternative to temperature.
+
+Prompt Sensitivity
+
+A well-documented challenge is that model performance can vary significantly with minor
+prompt changes — adding a period, changing word order, or rephrasing instructions can shift
+accuracy by 5-10% on benchmarks. This sensitivity motivates automated prompt optimisation
+approaches like DSPy, OPRO, and KD-SPAR, which systematically search for high-performing
+prompt configurations rather than relying on manual engineering.

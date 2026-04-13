@@ -1,0 +1,69 @@
+Parameter-Efficient Fine-Tuning: LoRA, QLoRA, and Modern Adaptation Methods
+
+Parameter-efficient fine-tuning (PEFT) adapts large pre-trained models to specific tasks
+without updating all parameters. This reduces computational cost, memory requirements, and
+the risk of catastrophic forgetting — where fine-tuning on new data degrades performance
+on the original training distribution.
+
+LoRA (Low-Rank Adaptation)
+
+Hu et al. (2021) introduced LoRA, which injects trainable low-rank decomposition matrices
+into the attention layers of a frozen pre-trained model. For a weight matrix W of dimension
+d_out x d_in, LoRA adds a bypass: W' = W + BA, where B is d_out x r and A is r x d_in,
+with rank r typically 4-64. This means only 2*r*d parameters are trained per layer instead
+of d_out*d_in. For a 7B model with r=16, LoRA updates approximately 0.1% of parameters.
+
+The key insight is that the weight updates during fine-tuning have low intrinsic rank — they
+can be well-approximated by low-rank matrices without significant loss of adaptation quality.
+LoRA adapters are typically applied to the query and value projection matrices (W_q, W_v),
+though applying them to all linear layers can improve quality at the cost of more parameters.
+
+At inference time, the adapter matrices can be merged into the base weights (W' = W + BA),
+adding zero latency. Multiple LoRA adapters can be swapped without reloading the base model.
+
+QLoRA (Quantised LoRA)
+
+Dettmers et al. (2023) combined 4-bit NormalFloat quantisation with LoRA to enable
+fine-tuning of 65B models on a single 48 GB GPU. Base model weights are quantised to 4-bit
+for storage and forward pass, while LoRA adapters remain in 16-bit for stable gradients.
+Double quantisation further compresses the quantisation constants. QLoRA achieves quality
+within 1-2% of full 16-bit fine-tuning while reducing memory by approximately 4x.
+
+Prefix Tuning and Prompt Tuning
+
+Prefix tuning (Li and Liang, 2021) prepends learnable continuous vectors (soft tokens) to
+the key and value matrices in every attention layer. These soft tokens are optimised through
+backpropagation while all model weights remain frozen. The prefix length is typically 10-100
+tokens. Unlike discrete prompting, soft tokens occupy a continuous space and can represent
+instructions that have no natural language equivalent.
+
+Prompt tuning (Lester et al., 2021) is a simplified variant that prepends learnable
+embeddings only to the input layer. This requires fewer parameters but is less expressive.
+As model size increases, prompt tuning approaches full fine-tuning performance, suggesting
+very large models need minimal steering.
+
+Adapter Layers
+
+Houlsby et al. (2019) proposed inserting small bottleneck modules between frozen transformer
+layers. Each adapter consists of a down-projection, nonlinearity, and up-projection with a
+residual connection. The bottleneck dimension (typically 64-256) controls the trade-off
+between capacity and parameter efficiency. Adapters add approximately 2-5% overhead per
+layer and can be trained independently for different tasks.
+
+Full Fine-Tuning and Instruction Tuning
+
+Full fine-tuning updates all parameters, providing maximum adaptation capacity but requiring
+the most compute and memory. Instruction tuning (FLAN, InstructGPT) trains the model on
+diverse tasks formatted as natural language instructions, teaching general instruction
+following rather than single-task specialisation. The training data consists of thousands
+of task descriptions paired with examples from existing NLP benchmarks.
+
+RLHF (Reinforcement Learning from Human Feedback)
+
+RLHF aligns instruction-tuned models with human preferences using a three-stage process:
+(1) collect human comparisons of model outputs, (2) train a reward model to predict human
+preferences, (3) optimise the language model using PPO with the reward model as signal.
+DPO (Direct Preference Optimisation) simplifies this by eliminating the separate reward
+model, directly optimising on preference pairs. The reward model captures nuanced quality
+distinctions that instruction tuning alone cannot, such as helpfulness, harmlessness,
+and appropriate calibration of confidence.

@@ -1,0 +1,71 @@
+Retrieval-Augmented Generation: Architecture, Implementation, and Best Practices
+
+Retrieval-Augmented Generation (RAG) grounds language model responses in external knowledge
+by retrieving relevant document passages at inference time. Rather than relying solely on
+parametric knowledge stored in model weights, RAG systems consult an external corpus to
+provide factual, up-to-date, and verifiable answers.
+
+The Three-Phase RAG Pipeline
+
+Phase 1 — Document Ingestion: Raw documents are split into chunks (typically 256-512 tokens
+with 10-20% overlap), each chunk is embedded into a dense vector using an embedding model
+(e.g., all-MiniLM-L6-v2 producing 384-dimensional vectors, or all-mpnet-base-v2 producing
+768-dimensional vectors), and the vectors are stored in a vector database alongside the
+original text and metadata. Chunking strategy profoundly affects retrieval quality: too-small
+chunks lose context, too-large chunks dilute relevance. Semantic chunking (splitting at
+paragraph or section boundaries) generally outperforms fixed-size windowing.
+
+Phase 2 — Retrieval: When a query arrives, it is embedded using the same model, and the
+vector database returns the top-K most similar chunks (typically K=3-5) ranked by cosine
+similarity or inner product. Hybrid retrieval combines dense vector search with sparse
+keyword matching (BM25) for better coverage — the dense component captures semantic
+similarity while the sparse component catches exact terminology matches that embeddings
+may miss.
+
+Phase 3 — Generation: The retrieved chunks are inserted into the language model's context
+window as grounding material. The model synthesises an answer that draws on the retrieved
+passages. A well-designed system prompt instructs the model to cite its sources, express
+uncertainty when context is partial, and avoid fabricating claims not supported by the
+retrieved evidence.
+
+Citation and Faithfulness
+
+Citation format uses [Doc-N] notation to trace specific claims to their source passages.
+Good RAG responses satisfy three properties: (1) every factual claim cites at least one
+retrieved passage, (2) no claim contradicts the retrieved evidence, and (3) the model
+explicitly hedges when the retrieved context is insufficient to answer confidently.
+
+Faithfulness is the primary quality metric for RAG systems. A response is faithful if every
+claim it makes is either directly supported by a retrieved passage or is common knowledge
+that requires no citation. Hallucination occurs when the model generates claims that appear
+factual but are not grounded in any retrieved evidence — this is the most dangerous failure
+mode because it produces confident-sounding misinformation.
+
+Common Failure Modes
+
+Missing citations: The model makes factual claims without citing a source. This may indicate
+the model is drawing on parametric knowledge rather than the retrieved context.
+
+Incorrect citations: The model cites a passage that does not actually support the claim.
+This suggests the model is performing surface-level pattern matching rather than genuine
+comprehension of the retrieved text.
+
+Over-citation: The model cites multiple passages for trivial claims, cluttering the response.
+This often results from instructions that are too aggressive about citation requirements.
+
+Hallucinated content: The model generates plausible-sounding information not present in any
+retrieved passage. This is especially common when retrieved passages are tangentially related
+to the query but do not directly answer it — the model "fills in the gaps" with fabricated
+details.
+
+Hedging failures: The model presents uncertain information with false confidence, or hedges
+excessively on claims that are well-supported by the evidence. Proper calibration requires
+the model to match its expressed confidence to the strength of the retrieved evidence.
+
+Advanced RAG Patterns
+
+Multi-hop RAG decomposes complex queries into sub-queries, retrieves evidence for each,
+and synthesises a composite answer. Self-RAG (Asai et al., 2023) trains the model to decide
+when to retrieve, what to retrieve, and how to critique its own output. Corrective RAG
+adds a verification step that checks whether retrieved passages are actually relevant before
+passing them to the generator.

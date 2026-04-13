@@ -1,0 +1,172 @@
+Python File I/O: Reading, Writing, and Data Serialisation
+
+Effective file handling is essential for experiment pipelines that load corpora, save results,
+and manage configuration. Python provides multiple approaches for different file types.
+
+Text File Operations
+
+    from pathlib import Path
+
+    def load_corpus_from_directory(corpus_dir: Path) -> dict[str, str]:
+        """Load all .txt files from a directory into a corpus dict.
+
+        Args:
+            corpus_dir: Path to directory containing .txt files.
+
+        Returns:
+            Dict mapping filename to file contents.
+
+        Raises:
+            FileNotFoundError: If corpus_dir doesn't exist.
+            ValueError: If no .txt files found.
+        """
+        if not corpus_dir.exists():
+            raise FileNotFoundError(f"Corpus directory not found: {corpus_dir}")
+
+        corpus = {}
+        for path in sorted(corpus_dir.glob("*.txt")):
+            text = path.read_text(encoding="utf-8").strip()
+            if text:
+                corpus[path.name] = text
+
+        if not corpus:
+            raise ValueError(f"No .txt files found in {corpus_dir}")
+
+        total_chars = sum(len(t) for t in corpus.values())
+        print(f"Loaded {len(corpus)} documents ({total_chars:,} chars) from {corpus_dir}")
+        return corpus
+
+    def save_prompt_history(prompts: list[str], output_path: Path) -> None:
+        """Save prompt evolution history, one prompt per section."""
+        with open(output_path, "w", encoding="utf-8") as f:
+            for i, prompt in enumerate(prompts):
+                f.write(f"=== Iteration {i} ===\n")
+                f.write(prompt)
+                f.write("\n\n")
+        print(f"Saved {len(prompts)} prompts to {output_path}")
+
+    # Reading with line processing
+    def count_tokens_per_doc(corpus_dir: Path) -> dict[str, int]:
+        """Count whitespace-delimited tokens in each document."""
+        counts = {}
+        for path in sorted(corpus_dir.glob("*.txt")):
+            with open(path, encoding="utf-8") as f:
+                token_count = sum(len(line.split()) for line in f)
+            counts[path.name] = token_count
+        return counts
+
+JSON Serialisation
+
+    import json
+    from datetime import datetime, timezone
+    from dataclasses import dataclass, asdict
+
+    @dataclass
+    class AblationResult:
+        condition: str
+        kd_score: float
+        citation_fidelity: float
+        seed: int
+        teacher: str
+        student: str
+        domain: str
+        iterations: int
+        timestamp: str = ""
+
+        def __post_init__(self):
+            if not self.timestamp:
+                self.timestamp = datetime.now(timezone.utc).isoformat()
+
+    def save_results(results: list[AblationResult], path: Path) -> None:
+        """Save results as formatted JSON with atomic write."""
+        temp_path = path.with_suffix(".tmp")
+        data = {
+            "version": "1.8.3",
+            "generated": datetime.now(timezone.utc).isoformat(),
+            "count": len(results),
+            "results": [asdict(r) for r in results],
+        }
+        with open(temp_path, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+        temp_path.rename(path)  # atomic on POSIX
+        print(f"Saved {len(results)} results to {path}")
+
+    def load_all_results(results_dir: Path) -> list[dict]:
+        """Load and merge all JSON result files from a directory."""
+        all_results = []
+        for path in sorted(results_dir.glob("ablation_*.json")):
+            try:
+                data = json.loads(path.read_text(encoding="utf-8"))
+                if "results" in data:
+                    all_results.extend(data["results"])
+                else:
+                    all_results.append(data)
+            except (json.JSONDecodeError, KeyError) as e:
+                print(f"  Warning: skipping {path.name}: {e}")
+        return all_results
+
+CSV for Tabular Data
+
+    import csv
+
+    def export_results_csv(results: list[dict], output_path: Path) -> None:
+        """Export results as CSV for analysis in pandas or Excel."""
+        if not results:
+            return
+
+        fieldnames = list(results[0].keys())
+        with open(output_path, "w", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(results)
+        print(f"Exported {len(results)} rows to {output_path}")
+
+    def import_human_ratings(csv_path: Path) -> list[dict]:
+        """Import human evaluation ratings from CSV."""
+        ratings = []
+        with open(csv_path, encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                ratings.append({
+                    "query_id": row["query_id"],
+                    "condition": row["condition"],
+                    "rater": row["rater"],
+                    "correctness": int(row["correctness"]),
+                    "completeness": int(row["completeness"]),
+                    "citation_quality": int(row["citation_quality"]),
+                })
+        return ratings
+
+Path Operations and Directory Management
+
+    import shutil
+
+    def setup_experiment_dirs(base: Path, experiment_id: str) -> dict[str, Path]:
+        """Create directory structure for an experiment run."""
+        dirs = {
+            "root": base / experiment_id,
+            "results": base / experiment_id / "results",
+            "prompts": base / experiment_id / "prompts",
+            "logs": base / experiment_id / "logs",
+        }
+        for d in dirs.values():
+            d.mkdir(parents=True, exist_ok=True)
+        return dirs
+
+    def archive_results(results_dir: Path, output_path: Path) -> Path:
+        """Create a zip archive of results for sharing."""
+        archive = shutil.make_archive(
+            str(output_path.with_suffix("")),
+            "zip",
+            root_dir=results_dir.parent,
+            base_dir=results_dir.name,
+        )
+        size_mb = Path(archive).stat().st_size / (1024 * 1024)
+        print(f"Archive created: {archive} ({size_mb:.1f} MB)")
+        return Path(archive)
+
+    # Glob patterns for finding specific result files
+    def find_config_results(results_dir: Path, teacher: str, student: str) -> list[Path]:
+        """Find all result files for a specific teacher-student pair."""
+        pattern = f"ablation_*{teacher.replace(':', '_')}*{student.replace(':', '_')}*.json"
+        return sorted(results_dir.glob(pattern))

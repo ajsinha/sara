@@ -1,0 +1,166 @@
+Python Error Handling: Exceptions, Context Managers, and Defensive Programming
+
+Robust error handling prevents silent failures and provides actionable diagnostics when
+things go wrong. Python's exception system, combined with context managers and defensive
+patterns, enables writing code that fails gracefully.
+
+Exception Hierarchy and Custom Exceptions
+
+    class SaraError(Exception):
+        """Base exception for all Sara toolkit errors."""
+        pass
+
+    class ModelNotFoundError(SaraError):
+        """Raised when a requested Ollama model is not available."""
+        def __init__(self, model_name: str):
+            self.model_name = model_name
+            super().__init__(f"Model '{model_name}' not found. Run: ollama pull {model_name}")
+
+    class ScoringError(SaraError):
+        """Raised when KD scoring fails."""
+        pass
+
+    class CorpusError(SaraError):
+        """Raised when corpus loading or validation fails."""
+        pass
+
+Try/Except Patterns
+
+    import json
+    import logging
+    from pathlib import Path
+
+    logger = logging.getLogger(__name__)
+
+    def load_results(path: Path) -> dict:
+        """Load experiment results with comprehensive error handling."""
+        try:
+            text = path.read_text(encoding="utf-8")
+        except FileNotFoundError:
+            logger.warning(f"Results file not found: {path}")
+            return {}
+        except PermissionError:
+            logger.error(f"Permission denied reading: {path}")
+            raise
+        except UnicodeDecodeError as e:
+            logger.error(f"Encoding error in {path}: {e}")
+            raise CorpusError(f"File {path} contains invalid UTF-8") from e
+
+        try:
+            data = json.loads(text)
+        except json.JSONDecodeError as e:
+            logger.error(f"Invalid JSON in {path} at line {e.lineno}: {e.msg}")
+            raise ScoringError(f"Corrupt results file: {path}") from e
+
+        # Validate structure
+        required_keys = {"conditions", "config"}
+        missing = required_keys - set(data.keys())
+        if missing:
+            raise ScoringError(f"Results missing required keys: {missing}")
+
+        return data
+
+    def safe_divide(numerator: float, denominator: float,
+                    default: float = 0.0) -> float:
+        """Division that returns default instead of raising ZeroDivisionError."""
+        try:
+            return numerator / denominator
+        except ZeroDivisionError:
+            return default
+
+Context Managers
+
+Context managers ensure cleanup happens even when exceptions occur:
+
+    import time
+    from contextlib import contextmanager
+
+    @contextmanager
+    def timer(label: str = "operation"):
+        """Context manager that times a block and logs the duration."""
+        start = time.perf_counter()
+        try:
+            yield
+        finally:
+            elapsed = time.perf_counter() - start
+            logger.info(f"{label} completed in {elapsed:.3f}s")
+
+    # Usage:
+    # with timer("ablation run"):
+    #     run_ablation(config=1, seed=42)
+
+    @contextmanager
+    def temporary_model(client, model_name: str):
+        """Ensure model is available, pull if needed, track usage."""
+        pulled = False
+        try:
+            if not client.model_exists(model_name):
+                client.pull(model_name)
+                pulled = True
+            yield client
+        except Exception:
+            logger.error(f"Error during inference with {model_name}")
+            raise
+        finally:
+            if pulled:
+                logger.info(f"Model {model_name} was pulled for this session")
+
+    class ResultsWriter:
+        """Context manager for atomic results file writing."""
+        def __init__(self, path: Path):
+            self.path = path
+            self.temp_path = path.with_suffix(".tmp")
+            self.file = None
+
+        def __enter__(self):
+            self.file = open(self.temp_path, "w", encoding="utf-8")
+            return self.file
+
+        def __exit__(self, exc_type, exc_val, exc_tb):
+            self.file.close()
+            if exc_type is None:
+                self.temp_path.rename(self.path)  # atomic on POSIX
+            else:
+                self.temp_path.unlink(missing_ok=True)
+                logger.error(f"Results write failed, temp file removed: {exc_val}")
+            return False  # don't suppress exceptions
+
+Defensive Programming Patterns
+
+    from typing import Any
+
+    def validate_experiment_config(config: dict[str, Any]) -> dict[str, Any]:
+        """Validate and normalise experiment configuration."""
+        validated = {}
+
+        # Required fields with type checking
+        if "teacher" not in config:
+            raise ValueError("Config must specify 'teacher' model")
+        if not isinstance(config["teacher"], str):
+            raise TypeError(f"teacher must be str, got {type(config['teacher']).__name__}")
+        validated["teacher"] = config["teacher"]
+
+        if "student" not in config:
+            raise ValueError("Config must specify 'student' model")
+        validated["student"] = config["student"]
+
+        # Optional fields with defaults and bounds checking
+        validated["iterations"] = max(1, min(config.get("iterations", 5), 20))
+        validated["seed"] = config.get("seed", 42)
+
+        temperature = config.get("temperature", 0.0)
+        if not 0.0 <= temperature <= 2.0:
+            raise ValueError(f"temperature must be in [0, 2], got {temperature}")
+        validated["temperature"] = temperature
+
+        return validated
+
+    def ensure_positive_scores(scores: list[float], context: str = "") -> list[float]:
+        """Filter out invalid scores with warning."""
+        valid = []
+        for i, s in enumerate(scores):
+            if isinstance(s, (int, float)) and 0 <= s <= 1:
+                valid.append(float(s))
+            else:
+                logger.warning(f"Invalid score at index {i}{f' ({context})' if context else ''}: {s}")
+        return valid

@@ -1,0 +1,70 @@
+LLM Safety: Alignment, Robustness, and Responsible Deployment
+
+LLM safety encompasses the techniques, evaluations, and deployment practices that ensure
+language models behave helpfully, harmlessly, and honestly. As models become more capable,
+safety becomes more critical — a model that can write persuasive text can also write
+misleading text, and a model that can reason about chemistry can potentially assist with
+harmful applications.
+
+Alignment Approaches
+
+Constitutional AI (Anthropic, Bai et al., 2022) uses a self-critique loop: the model
+generates a response, evaluates it against a set of principles (the "constitution"), and
+revises it to better satisfy those principles. This process is repeated for multiple rounds,
+with the revised outputs used as training data for RLHF. The key insight is that the
+model's own ability to identify problems in its outputs can be leveraged for alignment,
+reducing the need for human annotation. The constitution includes principles like "Choose
+the response that is most helpful while being harmless" and "Choose the response that
+sounds most similar to what a thoughtful, senior employee would say."
+
+Reinforcement Learning from Human Feedback (RLHF) trains a reward model from human
+preference comparisons, then optimises the language model using PPO to maximise the learned
+reward. The reward model captures nuanced quality judgements that rule-based systems cannot
+express. The main challenge is reward hacking — the model may find unexpected ways to
+achieve high reward scores without genuinely improving quality. KL divergence constraints
+between the fine-tuned and base models help prevent this by penalising responses that
+deviate too far from the base model's distribution.
+
+Direct Preference Optimisation (DPO) eliminates the separate reward model by reformulating
+the RLHF objective as a supervised learning problem on preference pairs. This simplifies
+training and avoids the instability of PPO, but may be less expressive than a learned
+reward model for complex preference patterns.
+
+Red Teaming and Adversarial Evaluation
+
+Red teaming systematically probes models for failure modes using adversarial prompts designed
+to elicit harmful, biased, or incorrect outputs. Effective red teaming covers multiple
+categories: harmful content generation, bias amplification, privacy violations, deceptive
+behavior, and jailbreaking (circumventing safety constraints through prompt injection).
+
+Automated red teaming uses language models to generate adversarial prompts at scale, testing
+thousands of attack vectors that would be impractical to enumerate manually. Gradient-based
+attacks (applicable to open-weight models) optimise adversarial suffixes that maximise the
+probability of harmful completions. The GCG attack (Zou et al., 2023) showed that short
+adversarial suffixes can transfer across models, highlighting a fundamental vulnerability.
+
+Guardrails and Runtime Safety
+
+Guardrails are runtime filters applied to model inputs and outputs to block harmful content.
+Input guardrails classify incoming prompts and reject those that match known attack patterns.
+Output guardrails scan generated responses for harmful content before returning them to the
+user. Multi-layer defense combines prompt classification, output filtering, and content
+moderation into a pipeline that is harder to bypass than any single component.
+
+Calibration and Hallucination
+
+Calibration ensures that a model's expressed confidence matches its actual accuracy. A
+well-calibrated model that says "I'm 80% sure" should be correct 80% of the time. Modern
+LLMs are generally poorly calibrated — they tend to express high confidence even when wrong.
+Verbalized confidence (asking the model to rate its own certainty) provides some signal
+but is not reliable enough for safety-critical applications.
+
+Hallucination detection in RAG systems compares generated claims against retrieved evidence.
+Each factual claim in the response is decomposed and checked: is it supported by a specific
+passage? Is it contradicted by any passage? Is it fabricated without evidence? Automated
+hallucination detection using NLI (Natural Language Inference) models can flag suspicious
+claims for human review, providing a scalable quality assurance mechanism.
+
+For RAG systems specifically, faithfulness grounding is the primary safety mechanism: every
+factual claim should trace to a specific retrieved passage via citation. Claims without
+citations are potential hallucinations and should be flagged or hedged appropriately.

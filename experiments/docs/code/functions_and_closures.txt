@@ -1,0 +1,150 @@
+Python Functions, Closures, and Decorators
+
+Functions in Python are first-class objects — they can be assigned to variables, passed as
+arguments, returned from other functions, and stored in data structures. This property
+enables powerful patterns including closures, decorators, and higher-order functions.
+
+Basic Function Definition
+
+Functions are defined with the 'def' keyword. Parameters can have default values, type hints
+improve readability, and docstrings document behavior:
+
+    def calculate_kd_score(student_output: str, teacher_output: str,
+                           alpha: float = 0.7) -> float:
+        """Calculate knowledge distillation alignment score.
+
+        Args:
+            student_output: The student model's generated response.
+            teacher_output: The teacher model's reference response.
+            alpha: Weight for content similarity vs structural match.
+
+        Returns:
+            A float between 0.0 and 1.0 indicating alignment quality.
+
+        Raises:
+            ValueError: If alpha is not between 0 and 1.
+        """
+        if not 0 <= alpha <= 1:
+            raise ValueError(f"alpha must be in [0,1], got {alpha}")
+
+        student_tokens = set(student_output.lower().split())
+        teacher_tokens = set(teacher_output.lower().split())
+
+        if not teacher_tokens:
+            return 0.0
+
+        intersection = student_tokens & teacher_tokens
+        union = student_tokens | teacher_tokens
+        jaccard = len(intersection) / len(union) if union else 0.0
+
+        precision = len(intersection) / len(student_tokens) if student_tokens else 0.0
+        recall = len(intersection) / len(teacher_tokens) if teacher_tokens else 0.0
+
+        return alpha * jaccard + (1 - alpha) * (precision + recall) / 2
+
+Variable-Length Arguments
+
+    def aggregate_scores(*scores: float, weights: list[float] | None = None) -> float:
+        """Compute weighted average of KD scores across queries."""
+        if not scores:
+            return 0.0
+        if weights is None:
+            weights = [1.0 / len(scores)] * len(scores)
+        if len(weights) != len(scores):
+            raise ValueError("weights length must match scores length")
+        return sum(s * w for s, w in zip(scores, weights))
+
+    def create_config(**kwargs) -> dict:
+        """Build experiment configuration from keyword arguments."""
+        defaults = {"temperature": 0.0, "max_tokens": 512, "seed": 42}
+        defaults.update(kwargs)
+        return defaults
+
+Closures
+
+A closure captures variables from its enclosing scope. This allows creating specialised
+functions from general templates:
+
+    def make_scorer(metric: str = "jaccard", threshold: float = 0.5):
+        """Factory that returns a configured scoring function.
+
+        The returned function closes over metric and threshold.
+        """
+        def score(student: str, teacher: str) -> dict:
+            if metric == "jaccard":
+                s_tokens = set(student.lower().split())
+                t_tokens = set(teacher.lower().split())
+                union = s_tokens | t_tokens
+                value = len(s_tokens & t_tokens) / len(union) if union else 0.0
+            elif metric == "overlap":
+                t_tokens = set(teacher.lower().split())
+                s_tokens = set(student.lower().split())
+                value = len(s_tokens & t_tokens) / len(t_tokens) if t_tokens else 0.0
+            else:
+                raise ValueError(f"Unknown metric: {metric}")
+
+            return {"value": value, "passed": value >= threshold, "metric": metric}
+
+        return score
+
+    # Usage:
+    strict_scorer = make_scorer("jaccard", threshold=0.7)
+    lenient_scorer = make_scorer("overlap", threshold=0.3)
+    result = strict_scorer("the cat sat", "the cat sat on the mat")
+
+Decorators
+
+Decorators wrap functions to add behavior without modifying the original code:
+
+    import functools
+    import time
+
+    def timer(func):
+        """Decorator that measures and prints execution time."""
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            start = time.perf_counter()
+            result = func(*args, **kwargs)
+            elapsed = time.perf_counter() - start
+            print(f"{func.__name__} took {elapsed:.4f}s")
+            return result
+        return wrapper
+
+    def retry(max_attempts: int = 3, delay: float = 1.0):
+        """Decorator factory with configurable retry logic."""
+        def decorator(func):
+            @functools.wraps(func)
+            def wrapper(*args, **kwargs):
+                last_error = None
+                for attempt in range(max_attempts):
+                    try:
+                        return func(*args, **kwargs)
+                    except Exception as e:
+                        last_error = e
+                        if attempt < max_attempts - 1:
+                            time.sleep(delay * (attempt + 1))
+                raise last_error
+            return wrapper
+        return decorator
+
+    @timer
+    @retry(max_attempts=3, delay=0.5)
+    def query_model(prompt: str) -> str:
+        """Query an LLM with automatic retry and timing."""
+        # ... implementation
+        pass
+
+Lambda Functions and Functional Patterns
+
+    # Sorting with custom keys
+    results = [{"model": "llama3b", "score": 0.72}, {"model": "qwen3b", "score": 0.85}]
+    ranked = sorted(results, key=lambda r: r["score"], reverse=True)
+
+    # Map and filter
+    scores = [0.3, 0.7, 0.5, 0.9, 0.2]
+    passing = list(filter(lambda s: s >= 0.5, scores))
+    normalized = list(map(lambda s: round(s / max(scores), 3), scores))
+
+    # Prefer list comprehensions for readability
+    passing = [s for s in scores if s >= 0.5]
+    normalized = [round(s / max(scores), 3) for s in scores]

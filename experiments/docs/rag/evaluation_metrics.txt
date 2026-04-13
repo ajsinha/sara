@@ -1,0 +1,79 @@
+NLP Evaluation Metrics: From Surface Overlap to Semantic Similarity
+
+Evaluating the quality of generated text is one of the most challenging problems in NLP.
+Automated metrics attempt to quantify how well a generated response matches a reference
+text, but each metric captures different aspects of quality — and none perfectly correlates
+with human judgement across all tasks.
+
+Token-Level Metrics
+
+BLEU (Bilingual Evaluation Understudy) measures n-gram precision: the fraction of n-grams
+in the generated text that appear in the reference. BLEU-4 uses n-grams up to length 4
+and applies a brevity penalty for short outputs. Originally designed for machine translation,
+BLEU works well when there is a single correct output form but performs poorly on open-ended
+generation where many valid responses exist. Scores range from 0 to 1, with human-quality
+translations typically scoring 0.3-0.5.
+
+ROUGE (Recall-Oriented Understudy for Gisting Evaluation) is the recall counterpart to
+BLEU: it measures what fraction of reference n-grams appear in the generated text. ROUGE-1
+(unigrams), ROUGE-2 (bigrams), and ROUGE-L (longest common subsequence) are the most
+common variants. ROUGE is standard for summarisation evaluation because recall matters more
+than precision when the goal is to capture the key information from a source document.
+
+METEOR (Metric for Evaluation of Translation with Explicit Ordering) improves on BLEU by
+incorporating stemming, synonym matching, and word order penalties. It aligns tokens between
+the generated and reference texts using exact matches, stems, and WordNet synonyms, then
+computes a weighted harmonic mean of precision and recall. METEOR correlates better with
+human judgement than BLEU but is more computationally expensive and language-dependent.
+
+Semantic Similarity Metrics
+
+BERTScore (Zhang et al., 2020) computes similarity using contextual embeddings from BERT
+rather than surface-level token matching. For each token in the generated text, it finds
+the most similar token in the reference (and vice versa) using cosine similarity of their
+BERT embeddings, then aggregates into precision, recall, and F1 scores. BERTScore captures
+paraphrase relationships that surface metrics miss: "the cat sat on the mat" and "a feline
+was resting on the rug" score poorly on BLEU but highly on BERTScore. The choice of BERT
+layer matters — later layers capture more semantic information, while earlier layers are
+more sensitive to syntax. Typical correlation with human judgement: r=0.6-0.8 on
+summarisation and dialogue tasks.
+
+MoverScore extends BERTScore by using Earth Mover's Distance to find the optimal many-to-
+many alignment between token embeddings, rather than greedy one-to-one matching. This better
+handles cases where information is reorganised between generated and reference texts.
+
+Sentence-BERT embeddings (all-mpnet-base-v2) can provide a single-vector similarity score
+by computing cosine similarity between sentence-level embeddings. This is computationally
+cheaper than token-level BERTScore but loses granularity — it cannot distinguish between
+a response that covers all the right topics but misses a critical detail versus one that
+covers fewer topics but gets each one right.
+
+RAG-Specific Metrics
+
+Faithfulness measures whether every claim in the generated response is grounded in the
+retrieved context. A response is unfaithful if it contains claims that are plausible but
+not supported by any retrieved passage. Faithfulness is typically evaluated by decomposing
+the response into individual claims and checking each against the retrieved passages.
+
+Answer Relevancy scores how well the response addresses the original query. A response
+can be faithful (every claim is grounded) but irrelevant (the claims do not answer the
+question). This often happens when the retrieval step returns tangentially related passages
+and the model dutifully summarises them rather than acknowledging it cannot answer.
+
+Context Precision measures whether the retrieved passages are relevant to the query. Low
+context precision means the retrieval step is returning noise that the generator must
+filter out, increasing the risk of hallucination.
+
+Hallucination Rate tracks the fraction of claims in the response that are not supported
+by any retrieved document. This is the complement of faithfulness, typically measured per
+claim rather than per response.
+
+Human Evaluation
+
+Human evaluation remains the gold standard but is expensive and slow. Standard protocols
+use 3-5 independent raters who score responses on predefined criteria (correctness,
+completeness, coherence, citation quality, tone). Inter-rater agreement is measured using
+Cohen's kappa (for 2 raters) or Fleiss' kappa (for 3+ raters). A kappa above 0.6 indicates
+substantial agreement. For NLP research, at least 50-100 evaluation samples are recommended
+to achieve statistical significance with 95% confidence intervals narrow enough to
+distinguish between conditions.

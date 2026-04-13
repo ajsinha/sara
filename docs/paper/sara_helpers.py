@@ -949,3 +949,95 @@ def part_banner(num, title, subtitle=""):
 
 
 # ═══════════════════════════════════════════════════════════════════════════
+
+# ═══════════════════════════════════════════════════════════════════════════
+# CHART GENERATORS — for Section 20 results visualisation
+# ═══════════════════════════════════════════════════════════════════════════
+
+_C_TEAL   = HexColor("#2E8B8B")
+_C_GREEN  = HexColor("#38A169")
+_C_RED    = HexColor("#E53E3E")
+COND_COLORS = {"D": GRAY_MED, "C": _C_RED, "B": GOLD, "A": CRIMSON, "E": _C_TEAL, "F": _C_GREEN}
+COND_NAMES  = {"D":"Baseline","C":"Random","B":"External","A":"KD-SPAR","E":"MetaKDSPAR","F":"Enhanced"}
+
+def results_bar_chart(labels, cond_scores, title="", fig_num="20.1", width=DW, height=195):
+    """Grouped bar chart: models on x, conditions as coloured bars."""
+    d = Drawing(width, height)
+    d.add(Rect(0,0,width,height,fillColor=HexColor("#F7F7F7"),strokeColor=None))
+    conds = [c for c in ["D","C","B","A","E","F"] if c in cond_scores]
+    nm, nc = len(labels), len(conds)
+    if nm==0 or nc==0: return []
+    ml,mr,mb,mt = 52,15,48,22
+    cw2,ch2 = width-ml-mr, height-mb-mt
+    gw = cw2/nm; bw = gw/(nc+1.5)
+    av = [v for s in cond_scores.values() for v in s if v>0]
+    if not av: return []
+    ymin,ymax = max(min(av)-0.08,0), min(max(av)+0.05,1.0)
+    sy = lambda v: mb+(v-ymin)/max(ymax-ymin,0.01)*ch2
+    for i in range(6):
+        yv = ymin+i*(ymax-ymin)/5; yp = sy(yv)
+        d.add(Line(ml,yp,width-mr,yp,strokeColor=HexColor("#D0D0D0"),strokeWidth=0.3))
+        d.add(String(ml-5,yp-3,f"{yv:.2f}",fontName="Helvetica",fontSize=6,fillColor=GRAY_MED,textAnchor="end"))
+    for gi,model in enumerate(labels):
+        gx = ml+gi*gw
+        for ci,c in enumerate(conds):
+            sc = cond_scores[c]
+            if gi>=len(sc) or sc[gi]==0: continue
+            bx = gx+(ci+0.5)*bw; by0 = sy(ymin); bh = sy(sc[gi])-by0
+            d.add(Rect(bx,by0,bw*0.85,max(bh,1),fillColor=COND_COLORS.get(c,GRAY_MED),strokeColor=None))
+        lbl = model.split(":")[0] if ":" in model else model
+        d.add(String(gx+gw/2,mb-14,lbl,fontName="Helvetica-Bold",fontSize=6.5,fillColor=CHARCOAL,textAnchor="middle"))
+        sz = model.split(":")[-1] if ":" in model else ""
+        d.add(String(gx+gw/2,mb-24,sz,fontName="Helvetica",fontSize=5.5,fillColor=GRAY_MED,textAnchor="middle"))
+    lx = width-mr-90
+    for i,c in enumerate(conds):
+        ly = height-mt-3-i*10
+        d.add(Rect(lx,ly,7,7,fillColor=COND_COLORS.get(c,GRAY_MED),strokeColor=None))
+        d.add(String(lx+10,ly,f"{c}: {COND_NAMES.get(c,c)}",fontName="Helvetica",fontSize=5.5,fillColor=CHARCOAL))
+    d.add(Line(ml,mb,ml,height-mt,strokeColor=CHARCOAL,strokeWidth=0.8))
+    d.add(Line(ml,mb,width-mr,mb,strokeColor=CHARCOAL,strokeWidth=0.8))
+    ft = f"Figure {fig_num} \u2014 {title}" if title else f"Figure {fig_num}"
+    d.add(String(width/2,height-10,ft,fontName="Helvetica-Bold",fontSize=7.5,fillColor=CHARCOAL,textAnchor="middle"))
+    d.add(String(10,height/2,"KD Score",fontName="Helvetica-Bold",fontSize=7,fillColor=CRIMSON,textAnchor="middle"))
+    return [Spacer(1,8),d,Spacer(1,10)]
+
+def results_gap_chart(labels, gaps, title="", fig_num="20.2", threshold=0.02, width=DW, height=170):
+    """Bar chart of gaps (pos/neg) with threshold line. gaps: {name: [val_per_model]}"""
+    d = Drawing(width, height)
+    d.add(Rect(0,0,width,height,fillColor=HexColor("#F7F7F7"),strokeColor=None))
+    gnames = list(gaps.keys()); nm = len(labels); ng = len(gnames)
+    if nm==0: return []
+    ml,mr,mb,mt = 52,15,48,22
+    cw2,ch2 = width-ml-mr, height-mb-mt
+    gw = cw2/nm; bw = gw/(ng+1.5)
+    av = [v for gv in gaps.values() for v in gv]
+    ymin,ymax = min(min(av)-0.01,-0.03), max(max(av)+0.01,0.05)
+    sy = lambda v: mb+(v-ymin)/max(ymax-ymin,0.01)*ch2
+    y0 = sy(0)
+    d.add(Line(ml,y0,width-mr,y0,strokeColor=HexColor("#888"),strokeWidth=0.8,strokeDashArray=[4,3]))
+    if ymin<threshold<ymax:
+        yt = sy(threshold)
+        d.add(Line(ml,yt,width-mr,yt,strokeColor=_C_GREEN,strokeWidth=0.6,strokeDashArray=[2,2]))
+        d.add(String(width-mr+2,yt-3,"strong",fontName="Helvetica",fontSize=5,fillColor=_C_GREEN))
+    gcols = [CRIMSON,_C_TEAL,_C_GREEN,GOLD,HexColor("#805AD5")]
+    for gi,model in enumerate(labels):
+        gx = ml+gi*gw
+        for ji,gn in enumerate(gnames):
+            vals = gaps[gn]
+            if gi>=len(vals): continue
+            v = vals[gi]; bx = gx+(ji+0.5)*bw; by0 = sy(0); bh = sy(v)-by0
+            col = gcols[ji%len(gcols)]
+            d.add(Rect(bx,min(by0,by0+bh),bw*0.85,abs(bh),fillColor=col,strokeColor=None))
+            d.add(String(bx+bw*0.4,max(by0,by0+bh)+3,f"{v:+.3f}",fontName="Helvetica",fontSize=5.5,fillColor=col,textAnchor="middle"))
+        lbl = model.split(":")[0] if ":" in model else model
+        d.add(String(gx+gw/2,mb-14,lbl,fontName="Helvetica-Bold",fontSize=6.5,fillColor=CHARCOAL,textAnchor="middle"))
+    lx = width-mr-80
+    for i,gn in enumerate(gnames):
+        ly = height-mt-3-i*10
+        d.add(Rect(lx,ly,7,7,fillColor=gcols[i%len(gcols)],strokeColor=None))
+        d.add(String(lx+10,ly,gn,fontName="Helvetica",fontSize=6,fillColor=CHARCOAL))
+    d.add(Line(ml,mb,ml,height-mt,strokeColor=CHARCOAL,strokeWidth=0.8))
+    ft = f"Figure {fig_num} \u2014 {title}" if title else f"Figure {fig_num}"
+    d.add(String(width/2,height-10,ft,fontName="Helvetica-Bold",fontSize=7.5,fillColor=CHARCOAL,textAnchor="middle"))
+    return [Spacer(1,8),d,Spacer(1,10)]
+

@@ -1,5 +1,74 @@
 # Changelog
 
+## v1.8.3 (April 2025)
+
+### Production-Realistic Corpus
+
+- **RAG corpus expanded** — 12 documents, 56 KB total (~7,800 words), each 3-5 KB.
+  Topics: KD theory, transformers, prompt engineering, evaluation metrics, vector databases,
+  model compression, LLM safety, distributed training, RAG systems, KD-SPAR method,
+  fine-tuning, local models. Each document contains definitions, explanations, examples,
+  caveats, and cross-references — dense enough to require genuine synthesis.
+
+- **Code corpus expanded** — 8 documents (was 4), 48 KB total (~4,800 words), each 3-8 KB.
+  Topics: functions/closures, data structures, algorithms, testing/pytest, error handling,
+  concurrency, file I/O, OOP patterns. Contains actual executable Python code with docstrings,
+  complexity annotations, and real-world patterns.
+
+- **Corpus stored as separate files** — `experiments/docs/rag/*.txt` and
+  `experiments/docs/code/*.txt`. Each document independently inspectable, modifiable,
+  and version-controllable. `load_corpus("rag"|"code")` reads from files with inline
+  fallback. Adding documents requires no code changes.
+
+- **Corpus Design Rationale** added to paper (§20.1b) and blog: explains why 3-5 KB
+  documents (not 100-word), why ~100-120 chunks creates realistic 4-5% selectivity, why
+  topical diversity with overlap. Documents the ceiling effect observed with small corpus.
+
+## v1.8.2 (April 2025)
+
+### Corpus File Organisation
+
+- **Auto-generated charts in paper** — `results_bar_chart()` and `results_gap_chart()`
+  in `sara_helpers.py` generate ReportLab charts directly in the PDF. `patch_paper.py`
+  embeds chart calls with data from `aggregated_results.json`:
+  - **Figure 20.1** — Grouped bar: KD score by condition per student model
+  - **Figure 20.2** — Gap bars: A−B, E−A, F−A, F−B gaps per student model
+- **Standalone chart module** — `experiments/results_charts.py` for external use
+- **7 student models** in master script with explicit `ollama pull` commands
+- **11 model configs** total (7 primary + 2 cross-family + 2 large student)
+
+## v1.8.0 (April 2025)
+
+### Comprehensive Experiment Infrastructure
+
+- **Expanded corpus** — RAG corpus tripled from 4 to 12 documents (~3,500 words)
+  covering transformers, prompt engineering, evaluation metrics, fine-tuning, vector
+  databases, model compression, LLM safety, and distributed training. Breaks the
+  E/F ceiling effect observed in v1.7.0 results.
+
+- **Expanded validation** — 25 validation queries (was 10) for tighter confidence
+  intervals and better statistical power.
+
+- **Three student architectures** — constant teacher (llama3.1:8b) tested against
+  three student models: llama3.2:3b (same family), qwen2.5:3b (cross-family),
+  gemma2:2b (different architecture, smallest). Tests whether the self-knowledge
+  mechanism is model-agnostic.
+
+- **Master experiment script** — `run_full_experiment.sh` runs 3 students × 2 domains
+  × 5 seeds = 30 ablation runs (180 condition evaluations). Includes ETA tracking,
+  automatic model pulling, result aggregation, and paper patching. Flags: `--quick`
+  (3 seeds, RAG only), `--rag-only`, `--code-only`, `--iterations=N`.
+
+### Paper Updates
+
+- §20.5 rewritten with deep critical analysis: variance analysis (A is 3.5× noisier
+  than B), citation fidelity insight (A=1.000 perfect), ceiling effect discussion,
+  baseline ladder validation.
+- §20.6 Limitations with specific methodological considerations.
+- §20.7 Next Steps with 6 actionable items.
+- §20.8 Reproduction commands updated for 5 iterations.
+- Removed all "honest/honesty" language (0 references remain).
+
 ## v1.7.0 (April 2025)
 
 ### Addressing Limitations — Six Targeted Improvements
@@ -271,4 +340,4 @@
 
 ---
 
-*Sara (सार) v1.7.0 · Ashutosh Sinha · ajsinha@gmail.com · AGPL-3.0*
+*Sara (सार) v1.8.3 · Ashutosh Sinha · ajsinha@gmail.com · AGPL-3.0*

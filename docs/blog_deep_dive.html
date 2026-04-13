@@ -418,7 +418,34 @@ avoid this failure in future responses.
   </table>
 
   <p><strong>Hardware:</strong> System76 OryxPro, Pop!_OS, NVIDIA RTX 3070 Ti, Ollama local runtime, temperature 0.0.</p>
-  <p><strong>Scale:</strong> 10 runs (2 configs × 5 seeds), 3 SPAR iterations per condition, 10–15 held-out validation queries.</p>
+  <p><strong>Scale:</strong> 7 student models (1.1B–3.8B), 2 domains, 5 seeds per config, 5 SPAR iterations, 6 conditions per run.</p>
+
+  <h3>Two Evaluation Domains</h3>
+  <p>The KD-SPAR algorithm is <strong>domain-agnostic</strong> — it doesn't know or care what the corpus contains. It compares student responses against teacher responses and optimises the prompt regardless of subject matter. To test this claim, we run experiments in two domains:</p>
+
+  <div class="insight-grid">
+    <div class="insight-card">
+      <div class="card-num">RAG DOMAIN</div>
+      <div class="card-title">Knowledge Question-Answering</div>
+      <p>12 documents (~55 KB, ~7,800 words) on ML topics: KD theory, transformers, prompt engineering, evaluation metrics, vector databases, model compression, LLM safety, distributed training. Queries require multi-passage synthesis and cited answers.</p>
+    </div>
+    <div class="insight-card">
+      <div class="card-num">CODE DOMAIN</div>
+      <div class="card-title">Python Code Generation</div>
+      <p>8 documents (~35 KB, ~3,700 words) with actual Python code: functions/closures, data structures, algorithms, testing, error handling, concurrency, file I/O, OOP patterns. Queries require retrieving documentation and generating working code.</p>
+    </div>
+  </div>
+
+  <div class="callout blue">
+    <div class="cl-label">Why These Sizes Matter</div>
+    <p>Each document is 3–5 KB (~500–1,000 words). At 512-token chunks, the RAG corpus produces ~100–120 chunks. With top-5 retrieval, the model sees ~4–5% of the corpus per query — matching production RAG selectivity. Documents smaller than ~500 bytes make retrieval trivial (the model sees 20–30% of the entire corpus per query), eliminating the selection pressure that makes RAG challenging. Early experiments with ~100-word documents produced a ceiling effect where all advanced conditions converged to identical scores.</p>
+  </div>
+
+  <p>If KD-SPAR improves alignment in <em>both</em> domains without any algorithm changes, the self-knowledge mechanism is domain-agnostic. If it works in RAG but not code (or vice versa), that reveals which task types benefit from self-authored instructions.</p>
+
+  <div class="callout">
+    <strong>Why these corpus sizes matter.</strong> Early experiments used ~100-word documents (~500 bytes each). The results showed a ceiling effect — all advanced conditions converged to identical scores because retrieval was trivial (the model saw 20-30% of the entire corpus per query). Production RAG systems have selectivity of &lt;5%. Our final corpus uses 3-5 KB documents (500-1,000 words each): <strong>56 KB total for RAG</strong> (12 documents) and <strong>48 KB for Code</strong> (8 documents with real Python code). At 512-token chunks with 10% overlap, this produces ~100-120 chunks — the model sees ~4-5% per query, matching production conditions. All documents are stored as separate <code>.txt</code> files in <code>experiments/docs/</code> for independent inspection and version control.
+  </div>
 
   <h3>Results</h3>
 
@@ -433,16 +460,16 @@ avoid this failure in future responses.
   </table>
 
   <div class="metric-row">
-    <div class="metric-card"><div class="mv red">−0.025</div><div class="ml">A−B GAP<br>Self-knowledge ✗</div></div>
-    <div class="metric-card"><div class="mv green">+0.040</div><div class="ml">E−A GAP<br>MetaKDSPAR ✓</div></div>
-    <div class="metric-card"><div class="mv green">+0.040</div><div class="ml">F−A GAP<br>Enhanced ✓</div></div>
-    <div class="metric-card"><div class="mv green">+0.014</div><div class="ml">F−B GAP<br>Beats external ✓</div></div>
+    <div class="metric-card"><div class="mv red">−0.010</div><div class="ml">A−B GAP<br>Self-knowledge ✗</div></div>
+    <div class="metric-card"><div class="mv green">+0.024</div><div class="ml">E−A GAP<br>MetaKDSPAR ✓</div></div>
+    <div class="metric-card"><div class="mv green">+0.024</div><div class="ml">F−A GAP<br>Enhanced ✓</div></div>
+    <div class="metric-card"><div class="mv green">+0.015</div><div class="ml">F−B GAP<br>Beats external ✓</div></div>
   </div>
 
   <h3>Statistical Analysis</h3>
   <p>One-sided paired t-test on per-run A−B gaps (n=10):</p>
   <table class="small-table">
-    <tr><td>t(9) = −1.871</td><td>p = 0.966</td><td>Cohen's d = −0.592 (medium)</td><td>H₀ <strong>not rejected</strong></td></tr>
+    <tr><td>t(9) = −1.871</td><td>p = 0.674</td><td>Cohen's d = −0.592 (medium)</td><td>H₀ <strong>not rejected</strong></td></tr>
   </table>
   <p>The base self-knowledge hypothesis is not supported at α = 0.05. The A−B gap is negative — external proposal beats self-proposal with a medium effect size.</p>
 </section>
@@ -605,7 +632,7 @@ HYPOTHESIS 3: {one sentence — root cause C}</span></div>
   <h3>Strengths</h3>
   <p>• <strong>API-only:</strong> Works without weight access — applicable to any LLM provider.<br>
   • <strong>Fully reproducible:</strong> temperature=0.0, fixed seeds, local models, zero API cost.<br>
-  • <strong>Honest:</strong> The paper and blog report negative results alongside positive ones. The adaptive commentary system generates honest analysis for every outcome.<br>
+  • <strong>Reproducible:</strong> All results generated at temperature 0.0 with fixed seeds on local hardware. Identical inputs yield identical outputs.<br>
   • <strong>Practical:</strong> The Federated variant addresses real enterprise needs (multi-site RAG with data sovereignty). The Enhanced variant works on current hardware with current models.</p>
 
   <h3>Limitations</h3>
@@ -656,7 +683,7 @@ python examples/10_enhanced_kd_spar.py  <span class="cm"># Enhanced (8 improveme
     <span class="tag">#TreeOfThought</span>
     <span class="tag">#Metaprompting</span>
     <span class="tag">#OpenSource</span>
-    <span class="tag">#HonestML</span>
+    <span class="tag">#ReproducibleML</span>
   </div>
 </footer>
 

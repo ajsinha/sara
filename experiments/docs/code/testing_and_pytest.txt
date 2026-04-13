@@ -1,0 +1,139 @@
+Python Testing with pytest: Patterns, Fixtures, and Best Practices
+
+Testing ensures code correctness and prevents regressions. pytest is the standard testing
+framework for Python, providing powerful features with minimal boilerplate.
+
+Basic Test Structure
+
+Test files are named test_*.py and test functions start with test_:
+
+    # test_kd_score.py
+    from sara.core.utils import kd_score
+
+    def test_identical_strings_score_one():
+        """Identical student and teacher outputs should score 1.0."""
+        text = "Knowledge distillation transfers knowledge from teacher to student."
+        assert kd_score(text, text) == 1.0
+
+    def test_empty_teacher_scores_zero():
+        """Empty teacher output means no alignment possible."""
+        assert kd_score("some student output", "") == 0.0
+
+    def test_partial_overlap():
+        """Partial token overlap should produce score between 0 and 1."""
+        student = "The cat sat on the mat"
+        teacher = "The cat slept on the rug"
+        score = kd_score(student, teacher)
+        assert 0.0 < score < 1.0
+
+    def test_score_bounds():
+        """Score should always be in [0, 1]."""
+        score = kd_score("hello world", "goodbye universe")
+        assert 0.0 <= score <= 1.0
+
+Fixtures — Reusable Test Setup
+
+    import pytest
+    import json
+    from pathlib import Path
+
+    @pytest.fixture
+    def sample_corpus():
+        """Provide a small test corpus."""
+        return {
+            "doc1.txt": "Knowledge distillation uses soft targets from a teacher model.",
+            "doc2.txt": "RAG systems retrieve documents to ground LLM responses.",
+            "doc3.txt": "BERTScore measures semantic similarity using contextual embeddings.",
+        }
+
+    @pytest.fixture
+    def sample_results(tmp_path):
+        """Create a temporary results file and return its path."""
+        results = {
+            "config": {"teacher": "llama3.1:8b", "student": "llama3.2:3b"},
+            "conditions": {
+                "A": {"mean_kd": 0.724, "std_kd": 0.044, "citation": 1.000},
+                "B": {"mean_kd": 0.734, "std_kd": 0.013, "citation": 0.980},
+            }
+        }
+        path = tmp_path / "test_results.json"
+        path.write_text(json.dumps(results))
+        return path
+
+    def test_corpus_has_three_docs(sample_corpus):
+        assert len(sample_corpus) == 3
+
+    def test_results_file_loadable(sample_results):
+        data = json.loads(sample_results.read_text())
+        assert "conditions" in data
+        assert "A" in data["conditions"]
+
+Parametrize — Run Same Test with Multiple Inputs
+
+    @pytest.mark.parametrize("student,teacher,expected_min", [
+        ("exact match text", "exact match text", 0.99),
+        ("the quick brown fox", "the slow brown fox", 0.5),
+        ("completely different", "nothing in common here at all", 0.0),
+    ])
+    def test_kd_score_ranges(student, teacher, expected_min):
+        score = kd_score(student, teacher)
+        assert score >= expected_min
+
+    @pytest.mark.parametrize("condition", ["A", "B", "C", "D", "E", "F"])
+    def test_all_conditions_produce_results(condition, sample_corpus):
+        """Every experimental condition should produce a valid result."""
+        # ... run condition and check result structure
+        pass
+
+Mocking External Dependencies
+
+    from unittest.mock import patch, MagicMock
+
+    def test_ollama_query_with_mock():
+        """Test model querying without a running Ollama server."""
+        mock_response = MagicMock()
+        mock_response.json.return_value = {
+            "response": "Knowledge distillation transfers dark knowledge."
+        }
+        mock_response.status_code = 200
+
+        with patch("requests.post", return_value=mock_response) as mock_post:
+            from sara.rag.ollama_client import OllamaClient
+            client = OllamaClient(model="llama3.2:3b")
+            result = client.generate("What is KD?")
+
+            assert "distillation" in result.lower()
+            mock_post.assert_called_once()
+
+    def test_scoring_with_mocked_bertscore():
+        """Test scoring when BERTScore is not installed."""
+        with patch("sara.core.utils.kd_score_v2") as mock_score:
+            mock_score.return_value = 0.85
+            from sara.core.utils import kd_score_v2
+            score = kd_score_v2("student text", "teacher text", use_bert=True)
+            assert score == 0.85
+
+Test-Driven Development (TDD) Workflow
+
+    # Step 1: Write a failing test
+    def test_ab_gap_calculation():
+        a_scores = [0.72, 0.75, 0.71, 0.77, 0.73]
+        b_scores = [0.73, 0.74, 0.73, 0.74, 0.72]
+        gap = sum(a - b for a, b in zip(a_scores, b_scores)) / len(a_scores)
+        assert abs(gap - 0.004) < 0.001  # expected A-B gap
+
+    # Step 2: Implement the function to make the test pass
+    # Step 3: Refactor while keeping tests green
+
+Coverage and Best Practices
+
+    # Run tests with coverage
+    # pytest --cov=sara --cov-report=term-missing tests/
+    #
+    # Aim for >80% line coverage on core modules
+    # 100% coverage on scoring functions (they are the experiment's measurement instrument)
+    # Use pytest.raises for expected exceptions:
+
+    def test_invalid_alpha_raises():
+        with pytest.raises(ValueError, match="alpha must be"):
+            kd_score("a", "b", alpha=1.5)

@@ -1,0 +1,156 @@
+Algorithm Patterns and Complexity Analysis in Python
+
+Algorithmic thinking involves recognising problem patterns and applying efficient solution
+strategies. Understanding time and space complexity helps choose appropriate approaches.
+
+Sorting and Searching
+
+Python's built-in sorted() uses Timsort — a hybrid merge sort / insertion sort that is
+O(n log n) average and worst case, and O(n) best case for nearly sorted data. Timsort is
+stable (preserves relative order of equal elements).
+
+    # Custom sorting with key functions
+    results = [
+        {"model": "llama3b", "score": 0.72, "variance": 0.044},
+        {"model": "phi3.8b", "score": 0.85, "variance": 0.012},
+        {"model": "gemma2b", "score": 0.68, "variance": 0.031},
+    ]
+
+    # Sort by score descending, then by variance ascending for ties
+    ranked = sorted(results, key=lambda r: (-r["score"], r["variance"]))
+
+    # Binary search on sorted data — O(log n)
+    import bisect
+
+    sorted_scores = [0.42, 0.55, 0.68, 0.72, 0.77, 0.85, 0.91]
+    insert_pos = bisect.bisect_left(sorted_scores, 0.75)  # index where 0.75 would go
+    # Find scores >= 0.7
+    start = bisect.bisect_left(sorted_scores, 0.7)
+    high_scores = sorted_scores[start:]  # [0.72, 0.77, 0.85, 0.91]
+
+    def binary_search(arr: list, target: float) -> int:
+        """Return index of target in sorted array, or -1 if not found."""
+        lo, hi = 0, len(arr) - 1
+        while lo <= hi:
+            mid = (lo + hi) // 2
+            if arr[mid] == target:
+                return mid
+            elif arr[mid] < target:
+                lo = mid + 1
+            else:
+                hi = mid - 1
+        return -1
+
+Two Pointers Pattern
+
+Used for problems on sorted arrays or when scanning from both ends:
+
+    def find_pair_with_sum(sorted_arr: list[float], target: float) -> tuple | None:
+        """Find two elements that sum to target. O(n) time, O(1) space."""
+        left, right = 0, len(sorted_arr) - 1
+        while left < right:
+            current_sum = sorted_arr[left] + sorted_arr[right]
+            if abs(current_sum - target) < 1e-9:
+                return (sorted_arr[left], sorted_arr[right])
+            elif current_sum < target:
+                left += 1
+            else:
+                right -= 1
+        return None
+
+Sliding Window Pattern
+
+For subarray/substring problems with contiguous elements:
+
+    def best_window_average(scores: list[float], window_size: int) -> float:
+        """Find the maximum average over any contiguous window. O(n) time."""
+        if len(scores) < window_size:
+            return sum(scores) / len(scores) if scores else 0.0
+
+        window_sum = sum(scores[:window_size])
+        best = window_sum / window_size
+
+        for i in range(window_size, len(scores)):
+            window_sum += scores[i] - scores[i - window_size]
+            best = max(best, window_sum / window_size)
+
+        return best
+
+    def longest_improving_streak(scores: list[float]) -> int:
+        """Find longest contiguous subsequence where each score > previous."""
+        if not scores:
+            return 0
+        max_streak = current = 1
+        for i in range(1, len(scores)):
+            if scores[i] > scores[i - 1]:
+                current += 1
+                max_streak = max(max_streak, current)
+            else:
+                current = 1
+        return max_streak
+
+Dynamic Programming
+
+For problems with overlapping subproblems and optimal substructure:
+
+    from functools import lru_cache
+
+    def min_cost_prompt_edits(source: list[str], target: list[str]) -> int:
+        """Minimum edits to transform source instruction list to target.
+        Similar to edit distance but operates on instruction-level tokens.
+        O(n*m) time and space where n, m are list lengths."""
+
+        @lru_cache(maxsize=None)
+        def dp(i: int, j: int) -> int:
+            if i == 0:
+                return j  # insert j instructions
+            if j == 0:
+                return i  # delete i instructions
+            if source[i - 1] == target[j - 1]:
+                return dp(i - 1, j - 1)
+            return 1 + min(
+                dp(i - 1, j),      # delete from source
+                dp(i, j - 1),      # insert from target
+                dp(i - 1, j - 1),  # replace
+            )
+
+        return dp(len(source), len(target))
+
+    # Bottom-up DP (avoids recursion limit for large inputs)
+    def fibonacci_dp(n: int) -> int:
+        """Compute nth Fibonacci number. O(n) time, O(1) space."""
+        if n <= 1:
+            return n
+        prev, curr = 0, 1
+        for _ in range(2, n + 1):
+            prev, curr = curr, prev + curr
+        return curr
+
+Graph Algorithms
+
+    from collections import deque
+
+    def find_related_documents(adjacency: dict[str, list[str]],
+                               start: str) -> list[str]:
+        """BFS to find all documents reachable from start. O(V+E)."""
+        visited = set()
+        queue = deque([start])
+        order = []
+        while queue:
+            node = queue.popleft()
+            if node in visited:
+                continue
+            visited.add(node)
+            order.append(node)
+            for neighbor in adjacency.get(node, []):
+                if neighbor not in visited:
+                    queue.append(neighbor)
+        return order
+
+Heap and Priority Queue
+
+    import heapq
+
+    def top_k_results(results: list[dict], k: int, key: str = "kd_score") -> list[dict]:
+        """Return top-k results by key using a min-heap. O(n log k)."""
+        return heapq.nlargest(k, results, key=lambda r: r[key])

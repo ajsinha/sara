@@ -6,7 +6,7 @@
 
 What if a student model could diagnose its own failures and rewrite its own system prompt to fix them?
 
-That's what KD-SPAR does. And when I tested it — with real experiments, on real hardware, with honest results — the naive version didn't work. The enhanced version did.
+That's what KD-SPAR does. And when I tested it — with real experiments, on real hardware, with reproducible results — the naive version didn't work. The enhanced version did.
 
 Here's the full story.
 
@@ -48,7 +48,7 @@ I ran a controlled ablation with 6 conditions on a System76 OryxPro (RTX 3070 Ti
 
 ---
 
-## The Honest Part: Base KD-SPAR Failed
+## The Unexpected Result: Base KD-SPAR Failed
 
 **A−B gap = −0.025.** The self-knowledge hypothesis was not supported in its naive form. External proposal (B) beat self-proposal (A). A 3B student model couldn't effectively diagnose its own failures.
 
@@ -97,7 +97,7 @@ MetaKDSPAR (4 specialist perspectives + conductor) also hit 0.312 — matching E
 
 **The metric is half the algorithm.** Jaccard actively penalises good work. BERTScore was the single highest-impact change.
 
-**Honest negative results are more interesting than positive ones.** The base failure motivated all eight enhancements. A clean positive A−B gap wouldn't have produced the Enhanced variant.
+**Negative results drive innovation.** The base failure motivated all eight enhancements. A clean positive A−B gap wouldn't have produced the Enhanced variant.
 
 **Federated prompt distillation is a real enterprise need.** Sharing instruction strings is safer than sharing gradients. Healthcare and banking need exactly this.
 
@@ -116,4 +116,4 @@ cd sara && bash setup_and_run.sh
 
 *Sara (सार) — the refined essence extracted from a larger whole. KD-SPAR finds the sāra of the student's own failures — and when that's not enough, Enhanced KD-SPAR provides the infrastructure to extract it properly.*
 
-#MachineLearning #KnowledgeDistillation #LLM #NLP #RAG #OpenSource #TreeOfThought #Metaprompting #HonestML
+#MachineLearning #KnowledgeDistillation #LLM #NLP #RAG #OpenSource #TreeOfThought #Metaprompting #ReproducibleML

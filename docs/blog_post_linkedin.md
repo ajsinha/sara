@@ -64,7 +64,7 @@ I designed a controlled five-condition ablation:
 
 Everything is held constant except who writes the instructions. The **A−B gap** isolates the pure value of self-authorship. The **E−A gap** tests whether multi-perspective diagnosis adds value over flat diagnosis.
 
-The experiment runs entirely on local hardware (Ollama, llama3.1:8b → llama3.2:3b, RTX 3070 Ti) — no API costs, no rate limits, fully reproducible. One command: `bash setup_and_run.sh`. The paper rebuilds automatically with real measured results, computed statistics (t-test, p-value, Cohen's d), and honest adaptive commentary. If the gap is negative, the paper says so and explains why.
+The experiment runs entirely on local hardware (Ollama, llama3.1:8b → llama3.2:3b, RTX 3070 Ti) — no API costs, no rate limits, fully reproducible. One command: `bash setup_and_run.sh`. The paper rebuilds automatically with real measured results, computed statistics (t-test, p-value, Cohen's d), and adaptive commentary. Results are fully reproducible with fixed seeds at temperature 0.0.
 
 ---
 
@@ -106,7 +106,7 @@ The paper covers the full arc: KD theory, taxonomy, implementations, benchmarks,
 
 **Metaprompting + KD is unexplored territory.** The combination of specialist decomposition with KD as the objective signal hasn't appeared in the literature. Whether it outperforms flat diagnosis depends on the student model's capacity — a 3B model may not maintain distinct specialist perspectives effectively. The ablation will tell.
 
-**Honesty in research matters.** If the A−B gap comes back negative, the paper says so. The adaptive commentary system in `patch_paper.py` generates honest analysis for every outcome — strong, moderate, marginal, or negative. No spin.
+**Reproducibility matters.** If the A−B gap comes back negative, the paper says so. The adaptive commentary system in `patch_paper.py` generates analysis for every outcome — strong, moderate, marginal, or negative. No spin.
 
 ---
 

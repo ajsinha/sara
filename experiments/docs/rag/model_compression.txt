@@ -1,0 +1,77 @@
+Model Compression: Quantisation, Pruning, and Efficient Inference
+
+Model compression reduces the computational and memory requirements of neural networks for
+deployment on resource-constrained hardware. The three primary techniques — quantisation,
+pruning, and architecture search — can be combined with knowledge distillation for
+multiplicative compression gains.
+
+Quantisation
+
+Quantisation reduces the numerical precision of model weights and activations. The standard
+training precision is FP32 (32-bit floating point), but inference can often be performed at
+much lower precision with minimal quality impact.
+
+FP16/BF16 (16-bit): Halves memory and doubles throughput on GPUs with tensor cores. BF16
+(Brain Float) maintains the same exponent range as FP32 with reduced mantissa precision,
+avoiding the overflow issues that FP16 can encounter with large activation values. Most
+modern training uses mixed precision — FP16/BF16 for forward and backward passes with FP32
+master weights for stability.
+
+INT8 (8-bit integer): Reduces memory by 4x compared to FP32. Post-training quantisation
+(PTQ) calibrates the quantisation parameters using a small calibration dataset (typically
+128-512 samples) without any retraining. The key challenge is handling activation outliers
+— a few channels may have values 10-100x larger than others, requiring per-channel or
+per-token quantisation to maintain accuracy. LLM.int8() (Dettmers et al., 2022) addresses
+this with mixed-precision decomposition, keeping outlier channels in FP16.
+
+INT4 (4-bit integer): The current practical floor for inference quality. GPTQ (Frantar et
+al., 2022) uses layer-wise quantisation with optimal rounding based on Hessian information.
+AWQ (Activation-Aware Weight Quantisation) protects the most important weights (those
+corresponding to large activations) by scaling them up before quantisation. The Q4_K_M
+format used by llama.cpp and Ollama applies block-wise 4-bit quantisation with per-block
+scaling factors, achieving approximately 4x compression with typically less than 2% quality
+degradation on benchmarks.
+
+Quantisation-Aware Training (QAT) simulates quantisation during training using straight-
+through estimators for gradient computation. This allows the model to adapt to quantisation
+noise, typically recovering 0.5-1% of the quality lost by post-training quantisation. QAT
+is more expensive than PTQ but produces better results, especially at aggressive
+quantisation levels (INT4 and below).
+
+Pruning
+
+Pruning removes redundant parameters to reduce model size and computational cost.
+
+Unstructured Pruning zeroes individual weights based on magnitude (smallest weights are
+assumed least important). This creates sparse weight matrices that can be stored efficiently
+using sparse matrix formats but may not provide speedups on standard hardware, which is
+optimised for dense computation. Typical sparsity levels of 50-80% maintain accuracy within
+1-2% of the dense model.
+
+Structured Pruning removes entire architectural components — attention heads, FFN
+dimensions, or whole layers. This produces smaller dense models that run faster on standard
+hardware without requiring sparse computation support. Head pruning (Michel et al., 2019)
+showed that many attention heads can be removed after training with minimal impact,
+suggesting significant redundancy in multi-head attention.
+
+The Lottery Ticket Hypothesis (Frankle and Carlin, 2019) suggests that dense networks contain
+sparse subnetworks ("winning tickets") that can match the dense network's performance when
+trained in isolation from the same initialisation. Finding these subnetworks requires
+iterative magnitude pruning with rewinding — pruning the smallest weights, resetting the
+remaining weights to their initial values, and retraining. While computationally expensive
+to find, winning tickets demonstrate that the information capacity required for a task is
+much smaller than the full network.
+
+Combining Techniques
+
+Distillation and quantisation are complementary: DistilBERT (6 layers, 66M parameters)
+quantised to INT8 achieves a combined compression factor of approximately 4x compared to
+BERT-base with only 3% quality degradation. The optimal compression pipeline is typically:
+(1) distil the model to reduce the number of parameters, (2) prune redundant heads or
+layers, (3) quantise the remaining parameters to INT4 or INT8. Each step is independently
+validated to ensure cumulative quality loss stays within acceptable bounds.
+
+For LLM deployment, the practical compression stack is: fine-tune with QLoRA (quantised
+base + low-rank adapters), merge adapters, quantise to Q4_K_M, and serve through an
+optimised runtime like llama.cpp or vLLM. This pipeline can compress a 7B model from
+approximately 14 GB (FP16) to approximately 4 GB (Q4) with minimal quality impact.

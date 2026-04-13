@@ -1,5 +1,5 @@
 # Sara API Reference
-**Sara v1.7.0** · Copyright (C) 2025 Ashutosh Sinha · AGPL-3.0
+**Sara v1.8.3** · Copyright (C) 2025 Ashutosh Sinha · AGPL-3.0
 
 ---
 
@@ -128,4 +128,4 @@ print(resp.citations)   # ["[Doc-1]", "[Doc-2]"]
 
 ---
 
-*Sara v1.7.0 · Ashutosh Sinha · ajsinha@gmail.com · AGPL-3.0*
+*Sara v1.8.3 · Ashutosh Sinha · ajsinha@gmail.com · AGPL-3.0*

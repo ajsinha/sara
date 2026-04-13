@@ -1,0 +1,35 @@
+
+=================================================================
+OLLAMA KD-SPAR ABLATION RESULTS  [custom_phi3_3.8b_stablelm2_1.6b]
+=================================================================
+Rank Cond  KD Score    Δ vs D    Cit Fid   Hedge         Time  Description
+-----------------------------------------------------------------
+  1     B     0.7384       +0.1319    1.000      16.020        92s  External-proposed
+  2     A     0.6581       +0.0516    0.840      8.080       663s  KD-SPAR (self-proposed)
+  3     C     0.6180       +0.0115    0.560      4.160        31s  Random instructions
+  4     F     0.6110       +0.0045    0.560      16.060        47s  Enhanced KD-SPAR (all improvem
+  5     E     0.6099       +0.0034    0.560      16.060        37s  MetaKDSPAR (meta-prompted)
+  6     D     0.6065       +0.0000    0.560      16.060        35s  Baseline (no tuning)
+
+=================================================================
+KEY FINDING:
+  ✗ INCONCLUSIVE — see details below
+  A=0.6581  B=0.7384  D=0.6065  C=0.6180
+
+MetaKDSPAR (E) = 0.6099   E−A gap = -0.0482
+  → Meta-prompting overhead not justified for this config
+
+Enhanced (F) = 0.6110   F−A gap = -0.0471   F−B gap = -0.1274
+  → Enhancements did not improve in this config
+
+A−B gap (self-authorship value) = -0.0803
+  → NEGATIVE — external matching/beating self-proposed
+
+INTERPRETATION:
+  A > B  → self-authorship adds value beyond the KD signal alone
+  E > A  → meta-prompting improves over flat self-diagnosis
+  F > A  → enhancements improve over base KD-SPAR
+  F > B  → enhanced self-authorship beats external proposal
+  B > C  → KD-signal-guided proposals beat random augmentation
+  B > D  → any KD-guided proposal beats no tuning
+  C ≈ D  → random instructions provide no real signal (expected)
